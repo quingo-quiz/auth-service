@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.api.rest.dto.AuthRequest;
 import tech.arhr.quingo.auth_service.api.rest.dto.RegisterRequest;
 import tech.arhr.quingo.auth_service.dto.TokenPairDto;
+import tech.arhr.quingo.auth_service.dto.UserDto;
 
 @Service
 public class AuthService {
@@ -23,4 +24,8 @@ public class AuthService {
     }
 
     public void logoutAll(String token) {}
+
+    public UserDto authorize(String token) {
+        return null;
+    }
 }
