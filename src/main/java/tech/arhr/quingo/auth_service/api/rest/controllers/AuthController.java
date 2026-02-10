@@ -7,10 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tech.arhr.quingo.auth_service.api.rest.dto.AuthRequest;
-import tech.arhr.quingo.auth_service.api.rest.dto.RegisterRequest;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
-import tech.arhr.quingo.auth_service.dto.TokenPairDto;
+import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
+import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
+import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.services.AuthService;
 
 @RestController
@@ -20,10 +20,10 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid RegisterRequest registerRequest) {
-        TokenPairDto tokenPairDto = authService.register(registerRequest);
+        AuthResponse authResponse = authService.register(registerRequest);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(tokenPairDto.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(tokenPairDto.getRefreshToken());
+        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()
@@ -34,10 +34,10 @@ public class AuthController {
 
     @PostMapping("/auth")
     public ResponseEntity<?> login(@Valid AuthRequest authRequest) {
-        TokenPairDto tokenPairDto = authService.authenticate(authRequest);
+        AuthResponse authResponse = authService.authenticate(authRequest);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(tokenPairDto.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(tokenPairDto.getRefreshToken());
+        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()
@@ -48,10 +48,10 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@CookieValue(name = "refresh_token") String refreshToken) {
-        TokenPairDto tokenPairDto = authService.refresh(refreshToken);
+        AuthResponse authResponse = authService.refresh(refreshToken);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(tokenPairDto.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(tokenPairDto.getRefreshToken());
+        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()
