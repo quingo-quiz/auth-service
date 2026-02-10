@@ -2,6 +2,12 @@ spring:
   application:
     name: auth-service
     domain: localhost
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  profiles:
+    active: local
 
 server:
   servlet:
