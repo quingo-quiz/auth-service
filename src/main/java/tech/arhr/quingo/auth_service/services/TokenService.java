@@ -21,6 +21,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,7 +45,7 @@ public class TokenService {
     private JWTVerifier VERIFIER;
 
     private final JpaTokenRepository tokenRepository;
-    private final JpaUserRepository userRepository;
+    private final UserService userService;
 
     @PostConstruct
     public void init() {
@@ -100,6 +101,7 @@ public class TokenService {
                 .token(token)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
+                .userDto(user)
                 .build();
 
         TokenEntity tokenEntity = TokenDto.toEntity(tokenDto);
@@ -142,9 +144,7 @@ public class TokenService {
     public UserDto getUserFromTokenWithQuery(String token) {
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());
-        UserEntity entity = userRepository.findById(userId).orElseThrow(() -> new AuthException("User not found"));
-
-        return UserDto.toDto(entity);
+        return userService.getUserById(userId);
     }
 
 
@@ -169,7 +169,10 @@ public class TokenService {
     }
 
     public void revokeAllUserTokens(String refreshToken) {
-
+        DecodedJWT jwt = decodeToken(refreshToken);
+        UUID userId = UUID.fromString(jwt.getSubject());
+        List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
+        entities.forEach(tokenEntity -> {tokenEntity.setRevoked(true);});
     }
 
     private boolean isRefreshTokenRevoked(String refreshToken) {

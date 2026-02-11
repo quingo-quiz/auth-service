@@ -16,12 +16,14 @@ public class UserDto {
     private UUID id;
     private String username;
     private String email;
+    private boolean isEmailVerified;
 
     public static UserDto toDto(UserEntity entity){
         return UserDto.builder()
                 .id(entity.getId())
                 .username(entity.getUsername())
                 .email(entity.getEmail())
+                .isEmailVerified(entity.isEmailVerified())
                 .build();
     }
 
@@ -30,6 +32,7 @@ public class UserDto {
                 .id(dto.getId())
                 .username(dto.getUsername())
                 .email(dto.getEmail())
+                .isEmailVerified(dto.isEmailVerified())
                 .build();
     }
 }

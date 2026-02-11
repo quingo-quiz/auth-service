@@ -25,4 +25,7 @@ public class TokenEntity {
     private OffsetDateTime expiresAt;
     private OffsetDateTime issuedAt;
     private boolean revoked;
+
+    @ManyToOne
+    private UserEntity user;
 }

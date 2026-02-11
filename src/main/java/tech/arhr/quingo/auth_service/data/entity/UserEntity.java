@@ -25,4 +25,5 @@ public class UserEntity {
     private String email;
     @Column(name = "password")
     private String hashedPassword;
+    private boolean isEmailVerified;
 }

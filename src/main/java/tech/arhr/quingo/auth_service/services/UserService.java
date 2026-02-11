@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.services;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.data.entity.UserEntity;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class UserService {
     private final JpaUserRepository userRepository;
@@ -44,6 +46,7 @@ public class UserService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .hashedPassword(hashedPassword)
+                .isEmailVerified(false)
                 .build();
 
         userRepository.save(userEntity);
