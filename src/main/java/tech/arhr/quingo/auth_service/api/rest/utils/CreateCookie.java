@@ -36,11 +36,27 @@ public class CreateCookie {
                 ACCESS_EXPIRATION_MINUTES * 60L);
     }
 
+    public ResponseCookie createDestroyAccessCookie() {
+        return createCookie(
+                "access_token",
+                "null",
+                "/",
+                0L);
+    }
+
     public ResponseCookie createRefreshCookie(TokenDto refreshToken) {
         return createCookie(
                 "refresh_token",
                 refreshToken.getToken(),
                 "/auth",
                 REFRESH_EXPIRATION_DAYS * 24 * 60 * 60L);
+    }
+
+    public ResponseCookie createDestroyRefreshCookie() {
+        return createCookie(
+                "refresh_token",
+                "null",
+                "/auth",
+                0L);
     }
 }

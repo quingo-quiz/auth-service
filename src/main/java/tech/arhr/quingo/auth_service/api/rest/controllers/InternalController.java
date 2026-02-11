@@ -10,12 +10,14 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/internal")
 @RequiredArgsConstructor
-public class UserController {
+public class InternalController {
+    private final AuthService authService;
 
-    @PostMapping("/info")
+    @PostMapping("/authorize")
     private ResponseEntity<UserDto> validate(@CookieValue(name = "access_token") String accessToken) {
-        return ResponseEntity.ok().body(null);
+        UserDto userDto = authService.authorize(accessToken);
+        return ResponseEntity.ok().body(userDto);
     }
 }
