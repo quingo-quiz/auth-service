@@ -19,7 +19,6 @@ public class TokenDto {
     private String token;
     private OffsetDateTime issuedAt;
     private OffsetDateTime expiresAt;
-    private long secondsAlive;
     private boolean revoked;
 
     public static TokenEntity toEntity(TokenDto tokenDto) {
@@ -28,7 +27,6 @@ public class TokenDto {
                 .token(tokenDto.getToken())
                 .issuedAt(tokenDto.getIssuedAt())
                 .expiresAt(tokenDto.getExpiresAt())
-                .secondsAlive(tokenDto.getSecondsAlive())
                 .revoked(tokenDto.isRevoked())
                 .build();
     }
@@ -39,7 +37,6 @@ public class TokenDto {
                 .token(tokenEntity.getToken())
                 .issuedAt(tokenEntity.getIssuedAt())
                 .expiresAt(tokenEntity.getExpiresAt())
-                .secondsAlive(tokenEntity.getSecondsAlive())
                 .revoked(tokenEntity.isRevoked())
                 .build();
     }

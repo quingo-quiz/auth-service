@@ -6,11 +6,10 @@ import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
-import tech.arhr.quingo.auth_service.exceptions.ServiceException;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
-import tech.arhr.quingo.auth_service.utils.PasswordHasher;
+import tech.arhr.quingo.auth_service.utils.Hasher;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,13 +22,16 @@ public class UserService {
 
 
     public UserDto checkPassword(String email, String password) {
-        String hashedPassword = PasswordHasher.hashPassword(password);
-        List<UserEntity> entities = userRepository.findByEmailEqualsAndHashedPasswordEquals(email, hashedPassword);
-        if (entities.isEmpty()) {
+        UserEntity userEntity = userRepository.findByEmail(email)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+        if (!Hasher.verify(password, userEntity.getHashedPassword())) {
             throw new InvalidCredentialsException("Invalid email or password");
-        } else {
-            return UserDto.toDto(entities.getFirst());
         }
+
+        return UserDto.toDto(userEntity);
     }
 
     public UserDto createUser(RegisterRequest request) {
@@ -37,12 +39,13 @@ public class UserService {
             throw new EmailAlreadyExistsException();
         }
 
-        String hashedPassword = PasswordHasher.hashPassword(request.getPassword());
+        String hashedPassword = Hasher.hash(request.getPassword());
         UserEntity userEntity = UserEntity.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .hashedPassword(hashedPassword)
                 .build();
+
         userRepository.save(userEntity);
         return UserDto.toDto(userEntity);
     }

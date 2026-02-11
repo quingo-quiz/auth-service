@@ -18,13 +18,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TokenEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(length = 400)
     private String token;
     private OffsetDateTime expiresAt;
     private OffsetDateTime issuedAt;
-    private long secondsAlive;
     private boolean revoked;
 }

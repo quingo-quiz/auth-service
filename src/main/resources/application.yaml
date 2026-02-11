@@ -10,7 +10,7 @@ spring:
     active: local
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
   jwt:
     secret: ${JWT_SECRET}
     expiration:

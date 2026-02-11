@@ -21,13 +21,14 @@ import tech.arhr.quingo.auth_service.services.AuthService;
 @Log
 public class AuthController {
     private final AuthService authService;
+    private final CreateCookie createCookie;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
         AuthResponse authResponse = authService.register(registerRequest);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
+        ResponseCookie accessCookie = createCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = createCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()
@@ -40,8 +41,8 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody @Valid AuthRequest authRequest) {
         AuthResponse authResponse = authService.authenticate(authRequest);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
+        ResponseCookie accessCookie = createCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = createCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()
@@ -54,8 +55,8 @@ public class AuthController {
     public ResponseEntity<?> refresh(@CookieValue(name = "refresh_token") String refreshToken) {
         AuthResponse authResponse = authService.refresh(refreshToken);
 
-        ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
-        ResponseCookie refreshCookie = CreateCookie.createRefreshCookie(authResponse.getRefreshToken());
+        ResponseCookie accessCookie = createCookie.createAccessCookie(authResponse.getAccessToken());
+        ResponseCookie refreshCookie = createCookie.createRefreshCookie(authResponse.getRefreshToken());
 
         return ResponseEntity
                 .ok()

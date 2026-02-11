@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface JpaUserRepository extends JpaRepository<UserEntity, UUID> {
-    List<UserEntity> findByEmailEqualsAndHashedPasswordEquals(String email, String hashedPassword);
-
     boolean existsByEmail(String email);
+
+    List<UserEntity> findByEmail(String email);
 }

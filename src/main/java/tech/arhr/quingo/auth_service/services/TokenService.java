@@ -3,19 +3,23 @@ package tech.arhr.quingo.auth_service.services;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.data.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
+import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import com.auth0.jwt.algorithms.Algorithm;
-import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
+import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
+import tech.arhr.quingo.auth_service.utils.Hasher;
 
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -35,18 +39,20 @@ public class TokenService {
     @Value("${spring.jwt.expiration.refresh-days}")
     private int REFRESH_EXPIRATION_DAYS;
 
-    private Algorithm ALGORITHM = Algorithm.HMAC256(JWT_SECRET);
+    private Algorithm ALGORITHM;
 
-    private JWTVerifier verifier = JWT.require(ALGORITHM)
-            .withIssuer(ISSUER)
-            .build();
+    private JWTVerifier VERIFIER;
 
     private final JpaTokenRepository tokenRepository;
-    private final UserService userService;
+    private final JpaUserRepository userRepository;
 
-    {
-        log.info(JWT_SECRET);
-        log.info(ISSUER);
+    @PostConstruct
+    public void init() {
+        ALGORITHM = Algorithm.HMAC256(JWT_SECRET);
+
+        VERIFIER = JWT.require(ALGORITHM)
+                .withIssuer(ISSUER)
+                .build();
     }
 
 
@@ -62,6 +68,7 @@ public class TokenService {
                 .withIssuedAt(issuedAt.toInstant())
                 .withExpiresAt(expiresAt.toInstant())
                 .withJWTId(id.toString())
+                .withClaim("typ", "access")
                 .withClaim("username", user.getUsername())
                 .withClaim("email", user.getEmail())
                 .sign(ALGORITHM);
@@ -70,7 +77,6 @@ public class TokenService {
                 .token(token)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
-                .secondsAlive(ACCESS_EXPIRATION_MINUTES * 60L)
                 .build();
     }
 
@@ -86,29 +92,42 @@ public class TokenService {
                 .withIssuedAt(issuedAt.toInstant())
                 .withExpiresAt(expiresAt.toInstant())
                 .withJWTId(id.toString())
+                .withClaim("typ", "refresh")
                 .sign(ALGORITHM);
+
         TokenDto tokenDto = TokenDto.builder()
+                .id(id)
                 .token(token)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
-                .secondsAlive(REFRESH_EXPIRATION_DAYS * 24 * 60 * 60L)
                 .build();
 
-        tokenRepository.save(TokenDto.toEntity(tokenDto));
+        TokenEntity tokenEntity = TokenDto.toEntity(tokenDto);
+        tokenEntity.setToken(Hasher.hash(tokenEntity.getToken()));
+        tokenRepository.save(tokenEntity);
 
         return tokenDto;
     }
 
-    public boolean validateToken(String token) {
-        try {
-            decodeToken(token);
-            return true;
-        } catch (Exception e) {
-            return false;
+    public void validateAccessToken(String accessToken) {
+        DecodedJWT jwt = decodeToken(accessToken);
+        if (!jwt.getClaim("typ").asString().equals("access")) {
+            throw new InvalidTokenException("Token is not access");
         }
     }
 
-    public UserDto getUserFromToken(String token) {
+    public void validateRefreshToken(String refreshToken) {
+        DecodedJWT jwt = decodeToken(refreshToken);
+
+        if (!jwt.getClaim("typ").asString().equals("refresh")) {
+            throw new InvalidTokenException("Token is not refresh");
+        }
+        if (isRefreshTokenRevoked(refreshToken)) {
+            throw new InvalidTokenException("Token is revoked");
+        }
+    }
+
+    public UserDto getUserFromTokenNoQuery(String token) {
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());
         String username = jwt.getClaim("username").asString();
@@ -120,26 +139,43 @@ public class TokenService {
                 .build();
     }
 
+    public UserDto getUserFromTokenWithQuery(String token) {
+        DecodedJWT jwt = decodeToken(token);
+        UUID userId = UUID.fromString(jwt.getSubject());
+        UserEntity entity = userRepository.findById(userId).orElseThrow(() -> new AuthException("User not found"));
+
+        return UserDto.toDto(entity);
+    }
+
+
     public DecodedJWT decodeToken(String token) {
         try {
-            return verifier.verify(token);
+            return VERIFIER.verify(token);
         } catch (Exception e) {
             throw new InvalidTokenException(e.getMessage());
         }
     }
 
     public void revokeRefreshToken(String refreshToken) {
+        validateRefreshToken(refreshToken);
         DecodedJWT jwt = decodeToken(refreshToken);
-        UUID tokenId = UUID.fromString(jwt.getId());
+        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
         TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
         if (tokenEntity != null) {
             tokenEntity.setRevoked(true);
-        } else{
+        } else {
             throw new InvalidTokenException("Token not found");
         }
     }
 
     public void revokeAllUserTokens(String refreshToken) {
-        
+
+    }
+
+    private boolean isRefreshTokenRevoked(String refreshToken) {
+        DecodedJWT jwt = decodeToken(refreshToken);
+        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
+        TokenEntity entity = tokenRepository.findById(tokenId).orElseThrow(() -> new InvalidTokenException("Token not found"));
+        return entity.isRevoked();
     }
 }
