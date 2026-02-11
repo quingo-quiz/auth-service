@@ -2,10 +2,13 @@ package tech.arhr.quingo.auth_service.api.rest.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
@@ -15,11 +18,12 @@ import tech.arhr.quingo.auth_service.services.AuthService;
 
 @RestController
 @RequiredArgsConstructor
+@Log
 public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid RegisterRequest registerRequest) {
+    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
         AuthResponse authResponse = authService.register(registerRequest);
 
         ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());
@@ -33,7 +37,7 @@ public class AuthController {
     }
 
     @PostMapping("/auth")
-    public ResponseEntity<?> login(@Valid AuthRequest authRequest) {
+    public ResponseEntity<?> login(@RequestBody @Valid AuthRequest authRequest) {
         AuthResponse authResponse = authService.authenticate(authRequest);
 
         ResponseCookie accessCookie = CreateCookie.createAccessCookie(authResponse.getAccessToken());

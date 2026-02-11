@@ -1,6 +1,7 @@
 package tech.arhr.quingo.auth_service.providers;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
@@ -8,7 +9,7 @@ import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.services.TokenService;
 import tech.arhr.quingo.auth_service.services.UserService;
 
-
+@Component
 @RequiredArgsConstructor
 public class LocalAuthProvider implements AuthProvider {
     private final TokenService tokenService;

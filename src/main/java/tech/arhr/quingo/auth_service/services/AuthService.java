@@ -44,7 +44,7 @@ public class AuthService {
     }
 
     public void logoutAll(String refreshToken) {
-        tokenService.revokeRefreshToken(refreshToken);
+        tokenService.revokeAllUserTokens(refreshToken);
     }
 
     public UserDto authorize(String token) {

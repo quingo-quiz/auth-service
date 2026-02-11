@@ -8,6 +8,14 @@ spring:
     password: ${POSTGRES_PASSWORD}
   profiles:
     active: local
+  jpa:
+    hibernate:
+      ddl-auto: update
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration:
+      access-minutes: 15
+      refresh-days: 30
 
 server:
   servlet:
