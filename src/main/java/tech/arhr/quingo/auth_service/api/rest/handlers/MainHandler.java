@@ -7,18 +7,18 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import tech.arhr.quingo.auth_service.exceptions.ServiceException;
+import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
 
 import java.time.OffsetDateTime;
 
 
 @RestControllerAdvice
-public class ServiceHandler {
-    @ExceptionHandler(ServiceException.class)
-    public ResponseEntity<ServiceError> handleException(ServiceException ex) {
-        ServiceError serviceError = ServiceError.builder()
+public class MainHandler {
+    @ExceptionHandler(QuingoAppException.class)
+    public ResponseEntity<AppError> handleException(QuingoAppException ex) {
+        AppError serviceError = AppError.builder()
                 .status(400)
-                .error(ex.getMessage())
+                .errorMessage(ex.getMessage())
                 .timestamp(OffsetDateTime.now())
                 .build();
 
@@ -29,9 +29,9 @@ public class ServiceHandler {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class ServiceError{
+    public static class AppError {
         private OffsetDateTime timestamp;
         private int status;
-        private String error;
+        private String errorMessage;
     }
 }

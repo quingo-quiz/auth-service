@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.services;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
@@ -7,6 +8,7 @@ import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.exceptions.ServiceException;
+import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.providers.AuthProvider;
 import tech.arhr.quingo.auth_service.providers.AuthProviderType;
 
@@ -18,6 +20,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final List<AuthProvider> authProviders;
 
+    @Transactional
     public AuthResponse register(RegisterRequest registerRequest) {
         AuthProvider provider = getAuthProvider(registerRequest.getProvider());
         return provider.register(registerRequest);
@@ -28,8 +31,8 @@ public class AuthService {
         return provider.authenticate(authRequest);
     }
 
+    @Transactional
     public AuthResponse refresh(String refreshToken) {
-
         UserDto user = tokenService.getUserFromToken(refreshToken);
         tokenService.revokeRefreshToken(refreshToken);
 
@@ -59,6 +62,6 @@ public class AuthService {
                     return provider.getProviderType().equals(type);
                 })
                 .findFirst()
-                .orElseThrow(() -> new ServiceException("Auth Provider Type Not Found"));
+                .orElseThrow(() -> new AuthException("Auth Provider Type Not Found"));
     }
 }

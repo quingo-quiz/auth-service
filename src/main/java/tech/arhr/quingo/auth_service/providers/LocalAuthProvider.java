@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.providers;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -31,6 +32,7 @@ public class LocalAuthProvider implements AuthProvider {
     }
 
     @Override
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         UserDto user = userService.createUser(request);
 

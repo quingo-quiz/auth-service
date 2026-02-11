@@ -13,6 +13,7 @@ import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import com.auth0.jwt.algorithms.Algorithm;
 import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
+import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -50,64 +51,57 @@ public class TokenService {
 
 
     public TokenDto createAccessToken(UserDto user) {
-        try {
-            OffsetDateTime issuedAt = OffsetDateTime.now();
-            OffsetDateTime expiresAt = issuedAt.plusMinutes(ACCESS_EXPIRATION_MINUTES);
-            UUID id = UUID.randomUUID();
+        OffsetDateTime issuedAt = OffsetDateTime.now();
+        OffsetDateTime expiresAt = issuedAt.plusMinutes(ACCESS_EXPIRATION_MINUTES);
+        UUID id = UUID.randomUUID();
 
-            String token = JWT.create()
-                    .withSubject(user.getId().toString())
-                    .withIssuer(ISSUER)
-                    .withAudience(ISSUER)
-                    .withIssuedAt(issuedAt.toInstant())
-                    .withExpiresAt(expiresAt.toInstant())
-                    .withJWTId(id.toString())
-                    .withClaim("username", user.getUsername())
-                    .sign(ALGORITHM);
+        String token = JWT.create()
+                .withSubject(user.getId().toString())
+                .withIssuer(ISSUER)
+                .withAudience(ISSUER)
+                .withIssuedAt(issuedAt.toInstant())
+                .withExpiresAt(expiresAt.toInstant())
+                .withJWTId(id.toString())
+                .withClaim("username", user.getUsername())
+                .withClaim("email", user.getEmail())
+                .sign(ALGORITHM);
 
-            return TokenDto.builder()
-                    .token(token)
-                    .issuedAt(issuedAt)
-                    .expiresAt(expiresAt)
-                    .secondsAlive(ACCESS_EXPIRATION_MINUTES * 60L)
-                    .build();
-        } catch (Exception e) {
-            throw new QuingoAppException(e.getMessage());
-        }
+        return TokenDto.builder()
+                .token(token)
+                .issuedAt(issuedAt)
+                .expiresAt(expiresAt)
+                .secondsAlive(ACCESS_EXPIRATION_MINUTES * 60L)
+                .build();
     }
 
     public TokenDto createRefreshToken(UserDto user) {
-        try {
-            OffsetDateTime issuedAt = OffsetDateTime.now();
-            OffsetDateTime expiresAt = issuedAt.plusDays(REFRESH_EXPIRATION_DAYS);
-            UUID id = UUID.randomUUID();
+        OffsetDateTime issuedAt = OffsetDateTime.now();
+        OffsetDateTime expiresAt = issuedAt.plusDays(REFRESH_EXPIRATION_DAYS);
+        UUID id = UUID.randomUUID();
 
-            String token = JWT.create()
-                    .withSubject(user.getId().toString())
-                    .withIssuer(ISSUER)
-                    .withAudience(ISSUER)
-                    .withIssuedAt(issuedAt.toInstant())
-                    .withExpiresAt(expiresAt.toInstant())
-                    .withJWTId(id.toString())
-                    .sign(ALGORITHM);
-            TokenDto tokenDto = TokenDto.builder()
-                    .token(token)
-                    .issuedAt(issuedAt)
-                    .expiresAt(expiresAt)
-                    .secondsAlive(REFRESH_EXPIRATION_DAYS * 24 * 60 * 60L)
-                    .build();
+        String token = JWT.create()
+                .withSubject(user.getId().toString())
+                .withIssuer(ISSUER)
+                .withAudience(ISSUER)
+                .withIssuedAt(issuedAt.toInstant())
+                .withExpiresAt(expiresAt.toInstant())
+                .withJWTId(id.toString())
+                .sign(ALGORITHM);
+        TokenDto tokenDto = TokenDto.builder()
+                .token(token)
+                .issuedAt(issuedAt)
+                .expiresAt(expiresAt)
+                .secondsAlive(REFRESH_EXPIRATION_DAYS * 24 * 60 * 60L)
+                .build();
 
-            tokenRepository.save(TokenDto.toEntity(tokenDto));
+        tokenRepository.save(TokenDto.toEntity(tokenDto));
 
-            return tokenDto;
-        } catch (Exception e) {
-            throw new QuingoAppException(e.getMessage());
-        }
+        return tokenDto;
     }
 
     public boolean validateToken(String token) {
         try {
-            verifier.verify(token);
+            decodeToken(token);
             return true;
         } catch (Exception e) {
             return false;
@@ -117,18 +111,35 @@ public class TokenService {
     public UserDto getUserFromToken(String token) {
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());
-        return userService.getUserById(userId);
+        String username = jwt.getClaim("username").asString();
+        String email = jwt.getClaim("email").asString();
+        return UserDto.builder()
+                .id(userId)
+                .username(username)
+                .email(email)
+                .build();
     }
 
     public DecodedJWT decodeToken(String token) {
-        return verifier.verify(token);
+        try {
+            return verifier.verify(token);
+        } catch (Exception e) {
+            throw new InvalidTokenException(e.getMessage());
+        }
     }
 
     public void revokeRefreshToken(String refreshToken) {
         DecodedJWT jwt = decodeToken(refreshToken);
-        //TokenEntity tokenEntity = tokenRepository.findById(UUID.fromString(jwt.getId()));
+        UUID tokenId = UUID.fromString(jwt.getId());
+        TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
+        if (tokenEntity != null) {
+            tokenEntity.setRevoked(true);
+        } else{
+            throw new InvalidTokenException("Token not found");
+        }
     }
 
     public void revokeAllUserTokens(String refreshToken) {
+        
     }
 }
