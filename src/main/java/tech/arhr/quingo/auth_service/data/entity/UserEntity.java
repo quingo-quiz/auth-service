@@ -26,4 +26,5 @@ public class UserEntity {
     @Column(name = "password")
     private String hashedPassword;
     private boolean isEmailVerified;
+    private boolean isAccountBlocked;
 }

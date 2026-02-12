@@ -40,9 +40,10 @@ public class ValidationHandler implements ErrorHandler<MethodArgumentNotValidExc
             }
         });
 
+        HttpStatus status = HttpStatus.BAD_REQUEST;
         ErrorResponse error = ErrorResponse.builder()
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .status(status.value())
+                .error(status.getReasonPhrase())
                 .errorMessage("Validation Failed")
                 .path(request.getRequestURI())
                 .method(request.getMethod())
@@ -51,6 +52,6 @@ public class ValidationHandler implements ErrorHandler<MethodArgumentNotValidExc
                 .timestamp(OffsetDateTime.now())
                 .build();
 
-        return ResponseEntity.badRequest().body(error);
+        return ResponseEntity.status(status).body(error);
     }
 }

@@ -17,6 +17,7 @@ public class UserDto {
     private String username;
     private String email;
     private boolean isEmailVerified;
+    private boolean isAccountBlocked;
 
     public static UserDto toDto(UserEntity entity){
         return UserDto.builder()
@@ -24,6 +25,7 @@ public class UserDto {
                 .username(entity.getUsername())
                 .email(entity.getEmail())
                 .isEmailVerified(entity.isEmailVerified())
+                .isAccountBlocked(entity.isAccountBlocked())
                 .build();
     }
 
@@ -33,6 +35,7 @@ public class UserDto {
                 .username(dto.getUsername())
                 .email(dto.getEmail())
                 .isEmailVerified(dto.isEmailVerified())
+                .isAccountBlocked(dto.isAccountBlocked())
                 .build();
     }
 }

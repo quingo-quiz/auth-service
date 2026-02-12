@@ -2,20 +2,23 @@ package tech.arhr.quingo.auth_service.api.rest.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
+import tech.arhr.quingo.auth_service.services.UserService;
 
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
+    private final AuthService authService;
+    private final UserService userService;
 
-    @PostMapping("/info")
+    @GetMapping("/info")
     private ResponseEntity<UserDto> validate(@CookieValue(name = "access_token") String accessToken) {
-        return ResponseEntity.ok().body(null);
+        // only for testing
+        // remove
+        UserDto user = authService.authorize(accessToken);
+        return ResponseEntity.ok(userService.getUserById(user.getId()));
     }
 }

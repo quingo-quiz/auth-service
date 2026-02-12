@@ -47,6 +47,7 @@ public class UserService {
                 .email(request.getEmail())
                 .hashedPassword(hashedPassword)
                 .isEmailVerified(false)
+                .isAccountBlocked(false)
                 .build();
 
         userRepository.save(userEntity);
