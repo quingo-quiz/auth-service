@@ -14,6 +14,7 @@ public class AuthRequest {
 
     @NotNull
     @NotBlank
+    @Email
     private String email;
 
     @NotNull

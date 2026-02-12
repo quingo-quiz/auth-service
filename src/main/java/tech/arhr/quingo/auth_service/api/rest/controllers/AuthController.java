@@ -86,6 +86,6 @@ public class AuthController {
                 .ok()
                 .header("Set-Cookie", destroyAccess.toString())
                 .header("Set-Cookie", destroyRefresh.toString())
-                .build();
+                .build();   
     }
 }
