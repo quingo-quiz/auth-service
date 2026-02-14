@@ -7,6 +7,7 @@ import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
+import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
@@ -46,6 +47,7 @@ public class UserService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .hashedPassword(hashedPassword)
+                .roles(List.of(UserRole.USER))
                 .isEmailVerified(false)
                 .isAccountBlocked(false)
                 .build();

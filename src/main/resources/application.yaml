@@ -16,6 +16,8 @@ spring:
     expiration:
       access-minutes: 15
       refresh-days: 30
+  main:
+    allow-circular-references: true
 
 server:
   servlet:

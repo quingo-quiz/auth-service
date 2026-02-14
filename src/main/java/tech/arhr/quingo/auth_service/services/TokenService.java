@@ -16,6 +16,7 @@ import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import com.auth0.jwt.algorithms.Algorithm;
+import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
@@ -23,6 +24,7 @@ import tech.arhr.quingo.auth_service.utils.Hasher;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +63,8 @@ public class TokenService {
         OffsetDateTime issuedAt = OffsetDateTime.now();
         OffsetDateTime expiresAt = issuedAt.plusMinutes(ACCESS_EXPIRATION_MINUTES);
         UUID id = UUID.randomUUID();
+        List<String> roles = user.getRoles().stream()
+                .map(UserRole::toString).toList();
 
         String token = JWT.create()
                 .withSubject(user.getId().toString())
@@ -72,6 +76,7 @@ public class TokenService {
                 .withClaim("typ", "access")
                 .withClaim("username", user.getUsername())
                 .withClaim("email", user.getEmail())
+                .withClaim("roles", roles)
                 .sign(ALGORITHM);
 
         return TokenDto.builder()
@@ -134,10 +139,12 @@ public class TokenService {
         UUID userId = UUID.fromString(jwt.getSubject());
         String username = jwt.getClaim("username").asString();
         String email = jwt.getClaim("email").asString();
+        List<UserRole> roles = jwt.getClaim("roles").asList(UserRole.class);
         return UserDto.builder()
                 .id(userId)
                 .username(username)
                 .email(email)
+                .roles(roles)
                 .build();
     }
 

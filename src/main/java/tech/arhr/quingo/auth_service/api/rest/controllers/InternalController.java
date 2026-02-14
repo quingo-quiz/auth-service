@@ -16,7 +16,7 @@ public class InternalController {
     private final AuthService authService;
 
     @PostMapping("/authorize")
-    private ResponseEntity<UserDto> validate(@CookieValue(name = "access_token") String accessToken) {
+    public ResponseEntity<UserDto> validate(@CookieValue(name = "access_token") String accessToken) {
         UserDto userDto = authService.authorize(accessToken);
         return ResponseEntity.ok().body(userDto);
     }

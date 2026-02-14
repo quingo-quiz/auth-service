@@ -6,7 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import tech.arhr.quingo.auth_service.enums.UserRole;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -19,12 +21,21 @@ public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
     @Column(length = 100, unique = true)
     private String username;
+
     @Column(length = 100, unique = true)
     private String email;
+
     @Column(name = "password")
     private String hashedPassword;
+
+    private List<UserRole> roles;
+
+    @Column(name = "verified")
     private boolean isEmailVerified;
+
+    @Column(name = "blocked")
     private boolean isAccountBlocked;
 }
