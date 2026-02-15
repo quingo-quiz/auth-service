@@ -13,6 +13,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import tech.arhr.quingo.auth_service.api.rest.filters.JwtAuthenticationFilter;
+import tech.arhr.quingo.auth_service.api.security.handlers.CustomAccessDeniedHandler;
+import tech.arhr.quingo.auth_service.api.security.handlers.CustomAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -20,6 +22,8 @@ import tech.arhr.quingo.auth_service.api.rest.filters.JwtAuthenticationFilter;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -34,12 +38,18 @@ public class SecurityConfig {
                 .anonymous(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/register").permitAll()
-                        .requestMatchers("/auth").permitAll()
-                        .requestMatchers("/logout/all").permitAll()
-                        .requestMatchers("/logout/d").permitAll()
-                        .requestMatchers("/refresh").permitAll()
+                        .requestMatchers(
+                                "/register",
+                                "/auth",
+                                "/logout",
+                                "/logout/all",
+                                "/refresh").permitAll()
                         .anyRequest().authenticated()
+                )
+
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler)
                 )
 
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
