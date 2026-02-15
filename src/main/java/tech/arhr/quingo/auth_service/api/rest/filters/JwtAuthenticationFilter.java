@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.api.rest.filters;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -7,9 +8,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -23,14 +26,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-@Lazy
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationConfiguration authenticationConfiguration;
 
-    @Autowired
-    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
-        this.authenticationManager = authenticationManager;
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -51,11 +50,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+    @SneakyThrows
     private void authInManager(String token) {
+        AuthenticationManager manager = authenticationConfiguration.getAuthenticationManager();
+
         if (token == null || token.isEmpty()) return;
         try {
             Authentication authentication = new JwtAuthenticationToken(token);
-            Authentication result = authenticationManager.authenticate(authentication);
+            Authentication result = manager.authenticate(authentication);
             SecurityContextHolder.getContext().setAuthentication(result);
         } catch (AuthException e) {}
     }
