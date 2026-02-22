@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 
 import java.util.List;
@@ -36,6 +37,6 @@ public class UserEntity {
     @Column(name = "verified")
     private boolean isEmailVerified;
 
-    @Column(name = "blocked")
-    private boolean isAccountBlocked;
+    @Column(name = "status")
+    private AccountStatus accountStatus;
 }

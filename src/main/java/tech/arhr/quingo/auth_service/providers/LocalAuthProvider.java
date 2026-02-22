@@ -7,6 +7,8 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
+import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
 import tech.arhr.quingo.auth_service.services.TokenService;
 import tech.arhr.quingo.auth_service.services.UserService;
 
@@ -24,6 +26,10 @@ public class LocalAuthProvider implements AuthProvider {
     @Override
     public AuthResponse authenticate(AuthRequest request) {
         UserDto user = userService.checkPassword(request.getEmail(), request.getPassword());
+
+        if (user.getAccountStatus() != AccountStatus.ACTIVE){
+            throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
+        }
 
         return AuthResponse.builder()
                 .accessToken(tokenService.createAccessToken(user))

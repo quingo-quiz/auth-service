@@ -2,11 +2,13 @@ package tech.arhr.quingo.auth_service.services;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -50,7 +53,7 @@ public class UserService {
                 .hashedPassword(hashedPassword)
                 .roles(List.of(UserRole.USER))
                 .isEmailVerified(false)
-                .isAccountBlocked(false)
+                .accountStatus(AccountStatus.ACTIVE)
                 .build();
 
         userRepository.save(userEntity);

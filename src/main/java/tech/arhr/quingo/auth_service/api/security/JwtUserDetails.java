@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import tech.arhr.quingo.auth_service.dto.UserDto;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
 
 import java.util.Collection;
 import java.util.List;
@@ -43,6 +44,10 @@ public class JwtUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return user.isAccountBlocked();
+        return user.getAccountStatus() == AccountStatus.ACTIVE;
+    }
+
+    public AccountStatus getAccountStatus() {
+        return user.getAccountStatus();
     }
 }

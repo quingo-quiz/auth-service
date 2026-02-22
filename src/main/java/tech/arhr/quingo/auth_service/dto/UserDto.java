@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import tech.arhr.quingo.auth_service.data.entity.UserEntity;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 
 import java.util.List;
@@ -20,5 +20,5 @@ public class UserDto {
     private String email;
     private List<UserRole> roles;
     private boolean isEmailVerified;
-    private boolean isAccountBlocked;
+    private AccountStatus accountStatus;
 }
