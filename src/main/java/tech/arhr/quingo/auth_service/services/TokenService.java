@@ -2,29 +2,25 @@ package tech.arhr.quingo.auth_service.services;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.annotation.PostConstruct;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.data.entity.TokenEntity;
-import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
-import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
-import com.auth0.jwt.algorithms.Algorithm;
 import tech.arhr.quingo.auth_service.enums.UserRole;
-import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -109,7 +105,7 @@ public class TokenService {
                 .userDto(user)
                 .build();
 
-        TokenEntity tokenEntity = TokenDto.toEntity(tokenDto);
+        TokenEntity tokenEntity = TokenMapper.INSTANCE.toEntity(tokenDto);
         tokenEntity.setToken(Hasher.hash(tokenEntity.getToken()));
         tokenRepository.save(tokenEntity);
 

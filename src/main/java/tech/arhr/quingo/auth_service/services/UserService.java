@@ -12,6 +12,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.UserMapper;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +35,7 @@ public class UserService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        return UserDto.toDto(userEntity);
+        return UserMapper.INSTANCE.toDto(userEntity);
     }
 
     public UserDto createUser(RegisterRequest request) {
@@ -53,13 +54,13 @@ public class UserService {
                 .build();
 
         userRepository.save(userEntity);
-        return UserDto.toDto(userEntity);
+        return UserMapper.INSTANCE.toDto(userEntity);
     }
 
     public UserDto getUserById(UUID id) {
         Optional<UserEntity> optional = userRepository.findById(id);
         if (optional.isPresent()) {
-            return UserDto.toDto(optional.get());
+            return UserMapper.INSTANCE.toDto(optional.get());
         } else {
             throw new EntityNotFoundException("User not found");
         }

@@ -21,26 +21,4 @@ public class UserDto {
     private List<UserRole> roles;
     private boolean isEmailVerified;
     private boolean isAccountBlocked;
-
-    public static UserDto toDto(UserEntity entity){
-        return UserDto.builder()
-                .id(entity.getId())
-                .username(entity.getUsername())
-                .email(entity.getEmail())
-                .roles(entity.getRoles())
-                .isEmailVerified(entity.isEmailVerified())
-                .isAccountBlocked(entity.isAccountBlocked())
-                .build();
-    }
-
-    public static UserEntity toEntity(UserDto dto){
-        return UserEntity.builder()
-                .id(dto.getId())
-                .username(dto.getUsername())
-                .email(dto.getEmail())
-                .roles(dto.getRoles())
-                .isEmailVerified(dto.isEmailVerified())
-                .isAccountBlocked(dto.isAccountBlocked())
-                .build();
-    }
 }

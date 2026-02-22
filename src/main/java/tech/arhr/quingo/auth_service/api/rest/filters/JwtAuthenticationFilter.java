@@ -1,16 +1,12 @@
 package tech.arhr.quingo.auth_service.api.rest.filters;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.SneakyThrows;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
@@ -19,11 +15,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
-import tech.arhr.quingo.auth_service.exceptions.auth.TokenNotFoundException;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -59,7 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Authentication authentication = new JwtAuthenticationToken(token);
             Authentication result = manager.authenticate(authentication);
             SecurityContextHolder.getContext().setAuthentication(result);
-        } catch (AuthException e) {}
+        } catch (AuthException e) {
+        }
     }
 
 }
