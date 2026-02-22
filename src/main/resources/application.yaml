@@ -10,7 +10,7 @@ spring:
     active: local
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
   jwt:
     secret: ${JWT_SECRET}
     expiration:
@@ -18,8 +18,11 @@ spring:
       refresh-days: 30
   main:
     allow-circular-references: true
+  flyway:
+    user: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
 
 server:
   servlet:
     context-path: /auth
-
