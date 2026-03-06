@@ -5,11 +5,14 @@ import org.springframework.stereotype.Repository;
 import tech.arhr.quingo.auth_service.data.entity.UserEntity;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface JpaUserRepository extends JpaRepository<UserEntity, UUID> {
     boolean existsByEmail(String email);
 
-    List<UserEntity> findByEmail(String email);
+    Optional<UserEntity> findByEmail(String email);
+
+    boolean existsByUsername(String username);
 }

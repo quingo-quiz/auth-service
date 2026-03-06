@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
@@ -24,10 +25,9 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Log
 public class TokenService {
     @Value("${spring.jwt.secret}")
-    private String JWT_SECRET = "sd";
+    private String JWT_SECRET;
 
     @Value("${spring.application.domain}")
     private String ISSUER;
@@ -44,6 +44,8 @@ public class TokenService {
 
     private final JpaTokenRepository tokenRepository;
     private final UserService userService;
+    private final Hasher hasher;
+    private final TokenMapper tokenMapper;
 
     @PostConstruct
     public void init() {
@@ -54,11 +56,13 @@ public class TokenService {
                 .build();
     }
 
-
     public TokenDto createAccessToken(UserDto user) {
         OffsetDateTime issuedAt = OffsetDateTime.now();
         OffsetDateTime expiresAt = issuedAt.plusMinutes(ACCESS_EXPIRATION_MINUTES);
         UUID id = UUID.randomUUID();
+
+        if (user.getRoles() == null || user.getRoles().isEmpty())
+            throw new InvalidTokenException("Invalid user roles");
         List<String> roles = user.getRoles().stream()
                 .map(UserRole::toString).toList();
 
@@ -82,6 +86,7 @@ public class TokenService {
                 .build();
     }
 
+    @Transactional
     public TokenDto createRefreshToken(UserDto user) {
         OffsetDateTime issuedAt = OffsetDateTime.now();
         OffsetDateTime expiresAt = issuedAt.plusDays(REFRESH_EXPIRATION_DAYS);
@@ -105,8 +110,8 @@ public class TokenService {
                 .userDto(user)
                 .build();
 
-        TokenEntity tokenEntity = TokenMapper.INSTANCE.toEntity(tokenDto);
-        tokenEntity.setToken(Hasher.hash(tokenEntity.getToken()));
+        TokenEntity tokenEntity = tokenMapper.toEntity(tokenDto);
+        tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
         tokenRepository.save(tokenEntity);
 
         return tokenDto;
@@ -121,13 +126,21 @@ public class TokenService {
 
     public void validateRefreshToken(String refreshToken) {
         DecodedJWT jwt = decodeToken(refreshToken);
+        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
 
         if (!jwt.getClaim("typ").asString().equals("refresh")) {
             throw new InvalidTokenException("Token is not refresh");
         }
-        if (isRefreshTokenRevoked(refreshToken)) {
+
+        TokenEntity entity = tokenRepository.findById(tokenId)
+                .orElseThrow(() -> new InvalidTokenException("Token not found"));
+
+        if (entity.isRevoked()){
             throw new InvalidTokenException("Token is revoked");
         }
+
+        if (!hasher.verify(refreshToken, entity.getToken()))
+            throw new InvalidTokenException("Token not exists");
     }
 
     public UserDto getUserFromTokenNoQuery(String token) {
@@ -144,6 +157,7 @@ public class TokenService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public UserDto getUserFromTokenWithQuery(String token) {
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());
@@ -159,6 +173,7 @@ public class TokenService {
         }
     }
 
+    @Transactional
     public void revokeRefreshToken(String refreshToken) {
         validateRefreshToken(refreshToken);
         DecodedJWT jwt = decodeToken(refreshToken);
@@ -171,17 +186,12 @@ public class TokenService {
         }
     }
 
+    @Transactional
     public void revokeAllUserTokens(String refreshToken) {
         DecodedJWT jwt = decodeToken(refreshToken);
         UUID userId = UUID.fromString(jwt.getSubject());
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
-        entities.forEach(tokenEntity -> {tokenEntity.setRevoked(true);});
+        entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
     }
 
-    private boolean isRefreshTokenRevoked(String refreshToken) {
-        DecodedJWT jwt = decodeToken(refreshToken);
-        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
-        TokenEntity entity = tokenRepository.findById(tokenId).orElseThrow(() -> new InvalidTokenException("Token not found"));
-        return entity.isRevoked();
-    }
 }

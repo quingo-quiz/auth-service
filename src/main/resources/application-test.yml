@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: auth-service
+    domain: localhost
+  datasource:
+    url: test
+    username: test
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  jwt:
+    secret: test-secret-jwt-string
+    expiration:
+      access-minutes: 15
+      refresh-days: 30
+  main:
+    allow-circular-references: true
+  flyway:
+    enabled: false
+
+server:
+  servlet:
+    context-path: /auth

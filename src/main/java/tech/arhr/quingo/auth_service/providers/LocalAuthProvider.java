@@ -25,7 +25,7 @@ public class LocalAuthProvider implements AuthProvider {
 
     @Override
     public AuthResponse authenticate(AuthRequest request) {
-        UserDto user = userService.checkPassword(request.getEmail(), request.getPassword());
+        UserDto user = userService.checkPasswordReturnUser(request.getEmail(), request.getPassword());
 
         if (user.getAccountStatus() != AccountStatus.ACTIVE){
             throw new AccountNotActiveException("Account status is " + user.getAccountStatus());

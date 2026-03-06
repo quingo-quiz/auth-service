@@ -35,7 +35,7 @@ public class UserEntity {
     private List<UserRole> roles;
 
     @Column(name = "verified")
-    private boolean isEmailVerified;
+    private boolean emailVerified;
 
     @Column(name = "status")
     private AccountStatus accountStatus;

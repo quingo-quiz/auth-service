@@ -19,6 +19,6 @@ public class UserDto {
     private String username;
     private String email;
     private List<UserRole> roles;
-    private boolean isEmailVerified;
+    private boolean emailVerified;
     private AccountStatus accountStatus;
 }
