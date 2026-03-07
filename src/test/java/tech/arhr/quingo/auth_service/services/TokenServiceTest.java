@@ -1,6 +1,7 @@
 package tech.arhr.quingo.auth_service.services;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +16,10 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +46,9 @@ class TokenServiceTest {
     @Mock
     private TokenMapper tokenMapper;
 
+    @Mock
+    private TimeProvider timeProvider;
+
     @InjectMocks
     private TokenService tokenService;
 
@@ -62,6 +68,8 @@ class TokenServiceTest {
                 .email("test@example.com")
                 .roles(List.of(UserRole.USER))
                 .build();
+
+        lenient().when(timeProvider.now()).thenReturn(Instant.now());
     }
 
 
@@ -151,7 +159,7 @@ class TokenServiceTest {
 
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
-        TokenService otherService = new TokenService(jpaTokenRepository, userService, hasher, tokenMapper);
+        TokenService otherService = new TokenService(jpaTokenRepository, userService, hasher, tokenMapper, timeProvider);
         ReflectionTestUtils.setField(otherService, "JWT_SECRET", "other-secret");
         ReflectionTestUtils.setField(otherService, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherService, "ACCESS_EXPIRATION_MINUTES", 15);

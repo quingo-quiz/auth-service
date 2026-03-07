@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -22,8 +23,8 @@ public class TokenEntity {
 
     @Column(length = 400)
     private String token;
-    private OffsetDateTime expiresAt;
-    private OffsetDateTime issuedAt;
+    private Instant expiresAt;
+    private Instant issuedAt;
     private boolean revoked;
 
     @ManyToOne

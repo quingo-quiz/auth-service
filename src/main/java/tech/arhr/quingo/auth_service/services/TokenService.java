@@ -6,7 +6,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +16,10 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,6 +46,7 @@ public class TokenService {
     private final UserService userService;
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
+    private final TimeProvider timeProvider;
 
     @PostConstruct
     public void init() {
@@ -57,8 +58,8 @@ public class TokenService {
     }
 
     public TokenDto createAccessToken(UserDto user) {
-        OffsetDateTime issuedAt = OffsetDateTime.now();
-        OffsetDateTime expiresAt = issuedAt.plusMinutes(ACCESS_EXPIRATION_MINUTES);
+        Instant issuedAt = timeProvider.now();
+        Instant expiresAt = issuedAt.plusSeconds(60L * ACCESS_EXPIRATION_MINUTES);
         UUID id = UUID.randomUUID();
 
         if (user.getRoles() == null || user.getRoles().isEmpty())
@@ -70,8 +71,8 @@ public class TokenService {
                 .withSubject(user.getId().toString())
                 .withIssuer(ISSUER)
                 .withAudience(ISSUER)
-                .withIssuedAt(issuedAt.toInstant())
-                .withExpiresAt(expiresAt.toInstant())
+                .withIssuedAt(issuedAt)
+                .withExpiresAt(expiresAt)
                 .withJWTId(id.toString())
                 .withClaim("typ", "access")
                 .withClaim("username", user.getUsername())
@@ -88,16 +89,16 @@ public class TokenService {
 
     @Transactional
     public TokenDto createRefreshToken(UserDto user) {
-        OffsetDateTime issuedAt = OffsetDateTime.now();
-        OffsetDateTime expiresAt = issuedAt.plusDays(REFRESH_EXPIRATION_DAYS);
+        Instant issuedAt = timeProvider.now();
+        Instant expiresAt = issuedAt.plusSeconds(60L * 60 * 24 * REFRESH_EXPIRATION_DAYS);
         UUID id = UUID.randomUUID();
 
         String token = JWT.create()
                 .withSubject(user.getId().toString())
                 .withIssuer(ISSUER)
                 .withAudience(ISSUER)
-                .withIssuedAt(issuedAt.toInstant())
-                .withExpiresAt(expiresAt.toInstant())
+                .withIssuedAt(issuedAt)
+                .withExpiresAt(expiresAt)
                 .withJWTId(id.toString())
                 .withClaim("typ", "refresh")
                 .sign(ALGORITHM);
@@ -135,7 +136,7 @@ public class TokenService {
         TokenEntity entity = tokenRepository.findById(tokenId)
                 .orElseThrow(() -> new InvalidTokenException("Token not found"));
 
-        if (entity.isRevoked()){
+        if (entity.isRevoked()) {
             throw new InvalidTokenException("Token is revoked");
         }
 
