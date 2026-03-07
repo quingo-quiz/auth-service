@@ -1,4 +1,4 @@
-package tech.arhr.quingo.auth_service.data.entity;
+package tech.arhr.quingo.auth_service.data.sql.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;

@@ -6,7 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tech.arhr.quingo.auth_service.data.entity.UserEntity;
+import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;

@@ -1,7 +1,6 @@
 package tech.arhr.quingo.auth_service.services;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,7 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import tech.arhr.quingo.auth_service.data.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -21,14 +20,11 @@ import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

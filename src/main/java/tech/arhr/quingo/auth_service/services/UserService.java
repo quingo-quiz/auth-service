@@ -3,7 +3,7 @@ package tech.arhr.quingo.auth_service.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.data.entity.UserEntity;
+import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;

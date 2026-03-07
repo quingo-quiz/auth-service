@@ -9,7 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.data.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.data.redis.RedisTokenRepository;
+import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
+import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -43,6 +45,7 @@ public class TokenService {
     private JWTVerifier VERIFIER;
 
     private final JpaTokenRepository tokenRepository;
+    private final BlackListTokenService blackListTokenService;
     private final UserService userService;
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
@@ -80,11 +83,16 @@ public class TokenService {
                 .withClaim("roles", roles)
                 .sign(ALGORITHM);
 
-        return TokenDto.builder()
+        TokenDto dto = TokenDto.builder()
+                .id(id)
                 .token(token)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
+                .userDto(user)
                 .build();
+
+        blackListTokenService.registerToken(dto);
+        return dto;
     }
 
     @Transactional
@@ -120,9 +128,15 @@ public class TokenService {
 
     public void validateAccessToken(String accessToken) {
         DecodedJWT jwt = decodeToken(accessToken);
-        if (!jwt.getClaim("typ").asString().equals("access")) {
+        UUID jti = UUID.fromString(jwt.getClaim("jti").asString());
+        String typ = jwt.getClaim("typ").asString();
+
+        if (blackListTokenService.isBlocked(jti))
+            throw new InvalidTokenException("Token is blocked");
+
+        if (!typ.equals("access"))
             throw new InvalidTokenException("Token is not access");
-        }
+
     }
 
     public void validateRefreshToken(String refreshToken) {
@@ -192,8 +206,11 @@ public class TokenService {
         validateRefreshToken(refreshToken);
         DecodedJWT jwt = decodeToken(refreshToken);
         UUID userId = UUID.fromString(jwt.getSubject());
+
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
         entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
+
+        blackListTokenService.blockAllUserTokens(userId);
     }
 
 }
