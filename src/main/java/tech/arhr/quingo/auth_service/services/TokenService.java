@@ -188,6 +188,7 @@ public class TokenService {
 
     @Transactional
     public void revokeAllUserTokens(String refreshToken) {
+        validateRefreshToken(refreshToken);
         DecodedJWT jwt = decodeToken(refreshToken);
         UUID userId = UUID.fromString(jwt.getSubject());
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);

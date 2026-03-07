@@ -1,7 +1,6 @@
 package tech.arhr.quingo.auth_service.api.security.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.net.httpserver.HttpsServer;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,7 +11,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
-import tech.arhr.quingo.auth_service.api.rest.errors.ErrorResponse;
+import tech.arhr.quingo.auth_service.api.rest.models.ErrorResponse;
+import tech.arhr.quingo.auth_service.utils.TimeProvider;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -22,6 +22,7 @@ import java.time.OffsetDateTime;
 @RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     private final ObjectMapper objectMapper;
+    private final TimeProvider timeProvider;
 
     @Override
     public void handle(HttpServletRequest request,
@@ -32,11 +33,11 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(status.value())
-                .error(status.getReasonPhrase())
-                .errorMessage(accessDeniedException.getMessage())
+                .statusMessage(status.getReasonPhrase())
+                .message(accessDeniedException.getMessage())
                 .path(request.getRequestURI())
                 .method(request.getMethod())
-                .timestamp(OffsetDateTime.now())
+                .timestamp(timeProvider.now())
                 .details(null)
                 .build();
 

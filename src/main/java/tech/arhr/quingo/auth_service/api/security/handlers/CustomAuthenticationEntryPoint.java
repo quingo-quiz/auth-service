@@ -9,7 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
-import tech.arhr.quingo.auth_service.api.rest.errors.ErrorResponse;
+import tech.arhr.quingo.auth_service.api.rest.models.ErrorResponse;
+import tech.arhr.quingo.auth_service.utils.TimeProvider;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -18,6 +19,7 @@ import java.time.OffsetDateTime;
 @RequiredArgsConstructor
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper;
+    private final TimeProvider timeProvider;
 
     @Override
     public void commence(HttpServletRequest request,
@@ -28,11 +30,11 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(status.value())
-                .error(status.getReasonPhrase())
-                .errorMessage("Authentication required: not found or invalid access_token cookie")
+                .statusMessage(status.getReasonPhrase())
+                .message("Authentication required: not found or invalid access_token cookie")
                 .path(request.getRequestURI())
                 .method(request.getMethod())
-                .timestamp(OffsetDateTime.now())
+                .timestamp(timeProvider.now())
                 .details(null)
                 .build();
 

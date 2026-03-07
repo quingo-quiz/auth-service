@@ -14,12 +14,15 @@ public class RegisterRequest {
     private String provider = "LOCAL";
 
     @Size(min = 1, max = 50)
+    @NotNull
     private String username;
 
     @Email
     @Size(min = 3, max = 100)
+    @NotNull
     private String email;
 
     @Size(min = 6, max = 50)
+    @NotNull
     private String password;
 }

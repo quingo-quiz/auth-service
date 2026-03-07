@@ -48,19 +48,19 @@ public abstract class BaseRestApiTest extends IntegrationTestBase {
 
     protected Tokens createUserAndGetTokens() {
         TestUser user = createTestUser();
-        return login(user.username, user.password);
+        return login(user.email, user.password);
     }
 
-    protected Tokens login(String username, String password) {
+    protected Tokens login(String email, String password) {
         Map<String, String> credentials = new HashMap<>();
-        credentials.put("username", username);
+        credentials.put("email", email);
         credentials.put("password", password);
 
         Response response = given()
                 .contentType(ContentType.JSON)
                 .body(credentials)
                 .when()
-                .post("/login")
+                .post("/auth")
                 .then()
                 .statusCode(200)
                 .extract()
@@ -72,8 +72,6 @@ public abstract class BaseRestApiTest extends IntegrationTestBase {
         );
     }
 
-
     protected record TestUser(String username, String password, String email) {}
-
     protected record Tokens(String accessToken, String refreshToken) {}
 }

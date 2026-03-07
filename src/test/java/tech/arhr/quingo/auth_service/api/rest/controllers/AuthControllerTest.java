@@ -3,25 +3,22 @@ package tech.arhr.quingo.auth_service.api.rest.controllers;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
-import static io.restassured.RestAssured.when;
+import static org.hamcrest.Matchers.containsString;
 
-public class AuthControllerTest extends BaseRestApiTest {
-
+class AuthControllerTest extends BaseRestApiTest {
 
     @Test
-    void register_ShouldReturnCookies() {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("username", "testname");
-        requestBody.put("password", "testpassword");
-        requestBody.put("email", "test@gmail.com");
-
+    void register_ValidRequest_ReturnsCookies() {
         given()
                 .contentType(ContentType.JSON)
-                .body(requestBody)
+                .body(Map.of(
+                        "username", "testName",
+                        "password", "testPassword",
+                        "email", "test@gmail.com"
+                ))
                 .when()
                 .post("/register")
                 .then()
@@ -31,16 +28,43 @@ public class AuthControllerTest extends BaseRestApiTest {
     }
 
     @Test
-    void login_ShouldReturnCookies() {
+    void register_DuplicateEmail_ReturnsConflict() {
         TestUser user = createTestUser();
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("password", user.password());
-        requestBody.put("email", user.email());
-
 
         given()
                 .contentType(ContentType.JSON)
-                .body(requestBody)
+                .body(Map.of(
+                        "username", "testName",
+                        "password", "testPassword",
+                        "email", user.email()
+                ))
+                .when()
+                .post("/register")
+                .then()
+                .statusCode(409);
+    }
+
+    @Test
+    void register_MissingRequiredFields_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("username", "testName"))
+                .when()
+                .post("/register")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void login_ValidCredentials_ReturnsCookies() {
+        TestUser user = createTestUser();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "email", user.email(),
+                        "password", user.password()
+                ))
                 .when()
                 .post("/auth")
                 .then()
@@ -50,16 +74,32 @@ public class AuthControllerTest extends BaseRestApiTest {
     }
 
     @Test
-    void login_InvalidPassword_ShouldReturnBadRequest() {
+    void login_ValidCredentials_CookiesAreHttpOnly() {
         TestUser user = createTestUser();
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("password", "password");
-        requestBody.put("email", user.email());
-
 
         given()
                 .contentType(ContentType.JSON)
-                .body(requestBody)
+                .body(Map.of(
+                        "email", user.email(),
+                        "password", user.password()
+                ))
+                .when()
+                .post("/auth")
+                .then()
+                .statusCode(200)
+                .header("Set-Cookie", containsString("HttpOnly"));
+    }
+
+    @Test
+    void login_InvalidPassword_ReturnsBadRequest() {
+        TestUser user = createTestUser();
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(Map.of(
+                        "email", user.email(),
+                        "password", "password"
+                ))
                 .when()
                 .post("/auth")
                 .then()
@@ -67,18 +107,154 @@ public class AuthControllerTest extends BaseRestApiTest {
     }
 
     @Test
-    void login_InvalidEmail_ShouldReturnBadRequest() {
+    void login_InvalidEmail_ReturnsBadRequest() {
         TestUser user = createTestUser();
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("password", user.password());
-        requestBody.put("email", "invalid@ml.com");
-
 
         given()
                 .contentType(ContentType.JSON)
-                .body(requestBody)
+                .body(Map.of(
+                        "email", "invalid@ml.com",
+                        "password", user.password()
+                ))
                 .when()
                 .post("/auth")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void refresh_ValidToken_ReturnsCookies() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(200)
+                .cookie("access_token")
+                .cookie("refresh_token");
+    }
+
+    @Test
+    void refresh_OldTokenIsRevokedAfterRefresh() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void refresh_NoToken_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void logout_ValidToken_ReturnsOk() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void logout_ValidToken_ClearsCookies() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200)
+                .cookie("access_token")
+                .cookie("refresh_token");
+    }
+
+    @Test
+    void logout_RevokedToken_ReturnsUnauthorized() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logout_NoToken_ReturnsBadRequest() {
+        given()
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void logoutAll_ValidToken_ReturnsOk() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void logoutAll_RevokedToken_ReturnsUnauthorized() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logoutAll_NoToken_ReturnsBadRequest() {
+        given()
+                .when()
+                .post("/logout/all")
                 .then()
                 .statusCode(400);
     }
