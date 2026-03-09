@@ -6,7 +6,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 public final class Postgres {
-    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:17");
+    public static final PostgreSQLContainer<?> postgresContainer
+            = new PostgreSQLContainer<>("postgres:17")
+            .withReuse(true);;
 
     public static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 

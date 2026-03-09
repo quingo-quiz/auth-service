@@ -2,12 +2,12 @@ package tech.arhr.quingo.auth_service.api.rest.controllers;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
-import tech.arhr.quingo.auth_service.dto.UserDto;
 
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.notNullValue;
 
 class AuthControllerTest extends BaseRestApiTest {
 
@@ -128,6 +128,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/refresh")
@@ -142,6 +143,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/refresh")
@@ -149,6 +151,7 @@ class AuthControllerTest extends BaseRestApiTest {
                 .statusCode(200);
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/refresh")
@@ -171,6 +174,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout")
@@ -183,6 +187,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout")
@@ -197,6 +202,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout")
@@ -204,6 +210,7 @@ class AuthControllerTest extends BaseRestApiTest {
                 .statusCode(200);
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout")
@@ -214,6 +221,7 @@ class AuthControllerTest extends BaseRestApiTest {
     @Test
     void logout_NoToken_ReturnsBadRequest() {
         given()
+                .contentType(ContentType.JSON)
                 .when()
                 .post("/logout")
                 .then()
@@ -225,6 +233,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout/all")
@@ -237,6 +246,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout/all")
@@ -244,6 +254,7 @@ class AuthControllerTest extends BaseRestApiTest {
                 .statusCode(200);
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout/all")
@@ -254,6 +265,7 @@ class AuthControllerTest extends BaseRestApiTest {
     @Test
     void logoutAll_NoToken_ReturnsBadRequest() {
         given()
+                .contentType(ContentType.JSON)
                 .when()
                 .post("/logout/all")
                 .then()
@@ -265,6 +277,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .cookie("access_token", tokens.accessToken())
                 .when()
@@ -273,6 +286,7 @@ class AuthControllerTest extends BaseRestApiTest {
                 .statusCode(200);
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("access_token", tokens.accessToken())
                 .when()
                 .post("/internal/authorize")
@@ -285,6 +299,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout")
@@ -297,6 +312,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens tokens = createUserAndGetTokens();
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", tokens.refreshToken())
                 .when()
                 .post("/logout/all")
@@ -318,6 +334,7 @@ class AuthControllerTest extends BaseRestApiTest {
         Tokens secondDevice = login(user.email(), user.password());
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", firstDevice.refreshToken())
                 .when()
                 .post("/logout/all")
@@ -325,10 +342,227 @@ class AuthControllerTest extends BaseRestApiTest {
                 .statusCode(200);
 
         given()
+                .contentType(ContentType.JSON)
                 .cookie("refresh_token", secondDevice.refreshToken())
                 .when()
                 .post("/refresh")
                 .then()
                 .statusCode(401);
+    }
+
+    @Test
+    void register_JsonStrategy_ReturnsTokensInBody() {
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of(
+                        "username", "jsonUser",
+                        "password", "testPassword",
+                        "email", "jsonuser@gmail.com"
+                ))
+                .when()
+                .post("/register")
+                .then()
+                .statusCode(200)
+                .body("data.accessToken", notNullValue())
+                .body("data.refreshToken", notNullValue());
+    }
+
+    @Test
+    void login_JsonStrategy_ReturnsTokensInBody() {
+        TestUser user = createTestUser();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of(
+                        "email", user.email(),
+                        "password", user.password()
+                ))
+                .when()
+                .post("/auth")
+                .then()
+                .statusCode(200)
+                .body("data.accessToken", notNullValue())
+                .body("data.refreshToken", notNullValue());
+    }
+
+    @Test
+    void refresh_JsonStrategy_ValidTokenInBody_ReturnsTokensInBody() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(200)
+                .body("data.accessToken", notNullValue())
+                .body("data.refreshToken", notNullValue());
+    }
+
+    @Test
+    void refresh_JsonStrategy_OldTokenRevokedAfterRefresh() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(200);
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void refresh_JsonStrategy_MissingTokenInBody_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void refresh_JsonStrategy_TokenInCookieIgnored_ReturnsBadRequest() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void logout_JsonStrategy_ValidTokenInBody_ReturnsOk() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void logout_JsonStrategy_RevokedToken_ReturnsUnauthorized() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logout_JsonStrategy_MissingTokenInBody_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void logoutAll_JsonStrategy_ValidTokenInBody_ReturnsOk() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void logoutAll_JsonStrategy_RevokedToken_ReturnsUnauthorized() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of("refresh_token", tokens.refreshToken()))
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logoutAll_JsonStrategy_MissingTokenInBody_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "json")
+                .body(Map.of())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void register_InvalidStrategy_ReturnsBadRequest() {
+        given()
+                .contentType(ContentType.JSON)
+                .header("Auth-Strategy", "invalid")
+                .body(Map.of(
+                        "username", "testName",
+                        "password", "testPassword",
+                        "email", "strategytest@gmail.com"
+                ))
+                .when()
+                .post("/register")
+                .then()
+                .statusCode(400);
     }
 }

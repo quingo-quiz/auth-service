@@ -8,7 +8,8 @@ import org.testcontainers.containers.GenericContainer;
 public final class Redis {
     public static final GenericContainer<?> redisContainer
             = new GenericContainer<>("redis:8.6-alpine")
-            .withExposedPorts(6379);
+            .withExposedPorts(6379)
+            .withReuse(true);;
 
     public static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 

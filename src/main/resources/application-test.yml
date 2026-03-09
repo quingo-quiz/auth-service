@@ -6,9 +6,12 @@ spring:
     url: test
     username: test
     password: test
+    hikari:
+      maximum-pool-size: 20
   jpa:
     hibernate:
       ddl-auto: create-drop
+    show-sql: false
   jwt:
     secret: test-secret-jwt-string
     expiration:
@@ -22,3 +25,9 @@ spring:
 server:
   servlet:
     context-path: /auth
+
+logging:
+  level:
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.testcontainers: WARN
