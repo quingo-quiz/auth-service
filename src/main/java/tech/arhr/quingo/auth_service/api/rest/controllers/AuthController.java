@@ -80,8 +80,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<SuccessResponse<Void>> logout(@CookieValue(name = "refresh_token") String refreshToken) {
-        authService.logout(refreshToken);
+    public ResponseEntity<SuccessResponse<Void>> logout(@CookieValue(name = "refresh_token") String refreshToken,
+                                                        @CookieValue(name = "access_token", required = false) String accessToken) {
+        authService.logout(refreshToken, accessToken);
         ResponseCookie destroyRefresh = createCookie.createDestroyRefreshCookie();
         ResponseCookie destroyAccess = createCookie.createDestroyAccessCookie();
         return ResponseEntity

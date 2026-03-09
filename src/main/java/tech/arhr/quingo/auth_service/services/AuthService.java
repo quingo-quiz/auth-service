@@ -63,6 +63,14 @@ public class AuthService {
     }
 
     @Transactional
+    public void logout(String refreshToken, String accessToken) {
+        tokenService.revokeRefreshToken(refreshToken);
+        if (accessToken != null) {
+           tokenService.blockAccessToken(accessToken);
+        }
+    }
+
+    @Transactional
     public void logoutAll(String refreshToken) {
         tokenService.revokeAllUserTokens(refreshToken);
     }

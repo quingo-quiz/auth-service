@@ -22,8 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -44,6 +43,9 @@ class TokenServiceTest {
 
     @Mock
     private TimeProvider timeProvider;
+
+    @Mock
+    private WhiteListTokenService whiteListTokenService;
 
     @InjectMocks
     private TokenService tokenService;
@@ -103,6 +105,13 @@ class TokenServiceTest {
         assertThat(result.getExpiresAt()).isAfter(result.getIssuedAt());
     }
 
+    @Test
+    void createAccessToken_ValidUser_RegistersTokenInWhiteList() {
+        tokenService.createAccessToken(defaultUser);
+
+        verify(whiteListTokenService).registerToken(any(TokenDto.class));
+    }
+
 
     @Test
     void createRefreshToken_ValidUser_SavesHashedTokenAndReturnsDto() {
@@ -119,6 +128,22 @@ class TokenServiceTest {
         assertThat(decoded.getSubject()).isEqualTo(defaultUser.getId().toString());
     }
 
+    @Test
+    void validateAccessToken_ValidAccessToken_NoException() {
+        String token = tokenService.createAccessToken(defaultUser).getToken();
+        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
+
+        assertThatNoException().isThrownBy(() -> tokenService.validateAccessToken(token));
+    }
+
+    @Test
+    void validateAccessToken_BlockedToken_ThrowsInvalidTokenException() {
+        String token = tokenService.createAccessToken(defaultUser).getToken();
+        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(true);
+
+        assertThatThrownBy(() -> tokenService.validateAccessToken(token))
+                .isInstanceOf(InvalidTokenException.class);
+    }
 
     @Test
     void validateAccessToken_TokenInvalid_ThrowsInvalidTokenException() {
@@ -155,7 +180,7 @@ class TokenServiceTest {
 
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
-        TokenService otherService = new TokenService(jpaTokenRepository, userService, hasher, tokenMapper, timeProvider);
+        TokenService otherService = new TokenService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider);
         ReflectionTestUtils.setField(otherService, "JWT_SECRET", "other-secret");
         ReflectionTestUtils.setField(otherService, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherService, "ACCESS_EXPIRATION_MINUTES", 15);

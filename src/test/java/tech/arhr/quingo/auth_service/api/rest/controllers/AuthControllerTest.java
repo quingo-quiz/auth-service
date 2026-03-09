@@ -2,6 +2,7 @@ package tech.arhr.quingo.auth_service.api.rest.controllers;
 
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
+import tech.arhr.quingo.auth_service.dto.UserDto;
 
 import java.util.Map;
 
@@ -34,8 +35,8 @@ class AuthControllerTest extends BaseRestApiTest {
         given()
                 .contentType(ContentType.JSON)
                 .body(Map.of(
-                        "username", "testName",
-                        "password", "testPassword",
+                        "username", "otherusername",
+                        "password", "testpassword",
                         "email", user.email()
                 ))
                 .when()
@@ -257,5 +258,77 @@ class AuthControllerTest extends BaseRestApiTest {
                 .post("/logout/all")
                 .then()
                 .statusCode(400);
+    }
+
+    @Test
+    void logout_WithAccessToken_BlocksAccessToken() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .cookie("access_token", tokens.accessToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("access_token", tokens.accessToken())
+                .when()
+                .post("/internal/authorize")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logout_WithoutAccessToken_ReturnsOk() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void logoutAll_BlocksAccessToken() {
+        Tokens tokens = createUserAndGetTokens();
+
+        given()
+                .cookie("refresh_token", tokens.refreshToken())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("access_token", tokens.accessToken())
+                .when()
+                .post("/internal/authorize")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void logoutAll_BlocksRefreshTokenOnAllDevices() {
+        TestUser user = createTestUser();
+        Tokens firstDevice = login(user.email(), user.password());
+        Tokens secondDevice = login(user.email(), user.password());
+
+        given()
+                .cookie("refresh_token", firstDevice.refreshToken())
+                .when()
+                .post("/logout/all")
+                .then()
+                .statusCode(200);
+
+        given()
+                .cookie("refresh_token", secondDevice.refreshToken())
+                .when()
+                .post("/refresh")
+                .then()
+                .statusCode(401);
     }
 }

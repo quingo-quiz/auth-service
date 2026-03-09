@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.data.redis.RedisTokenRepository;
-import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
@@ -45,7 +43,7 @@ public class TokenService {
     private JWTVerifier VERIFIER;
 
     private final JpaTokenRepository tokenRepository;
-    private final BlackListTokenService blackListTokenService;
+    private final WhiteListTokenService whiteListTokenService;
     private final UserService userService;
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
@@ -91,7 +89,7 @@ public class TokenService {
                 .userDto(user)
                 .build();
 
-        blackListTokenService.registerToken(dto);
+        whiteListTokenService.registerToken(dto);
         return dto;
     }
 
@@ -131,7 +129,7 @@ public class TokenService {
         UUID jti = UUID.fromString(jwt.getClaim("jti").asString());
         String typ = jwt.getClaim("typ").asString();
 
-        if (blackListTokenService.isBlocked(jti))
+        if (whiteListTokenService.isBlocked(jti))
             throw new InvalidTokenException("Token is blocked");
 
         if (!typ.equals("access"))
@@ -201,6 +199,13 @@ public class TokenService {
         }
     }
 
+    public void blockAccessToken(String token) {
+        validateAccessToken(token);
+        DecodedJWT jwt = decodeToken(token);
+        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
+        whiteListTokenService.blockToken(tokenId);
+    }
+
     @Transactional
     public void revokeAllUserTokens(String refreshToken) {
         validateRefreshToken(refreshToken);
@@ -210,7 +215,7 @@ public class TokenService {
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
         entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
 
-        blackListTokenService.blockAllUserTokens(userId);
+        whiteListTokenService.blockAllUserTokens(userId);
     }
 
 }

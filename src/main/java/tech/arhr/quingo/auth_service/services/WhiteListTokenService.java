@@ -1,6 +1,7 @@
 package tech.arhr.quingo.auth_service.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tech.arhr.quingo.auth_service.data.redis.RedisTokenRepository;
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
@@ -12,9 +13,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class BlackListTokenService {
+public class WhiteListTokenService {
     private final RedisTokenRepository redisTokenRepository;
     private final TokenMapper tokenMapper;
     private final TimeProvider timeProvider;
@@ -25,7 +27,7 @@ public class BlackListTokenService {
 
         redisTokenRepository.addToUserTokensSet(userId, model);
         redisTokenRepository.save(model);
-        //deleteExpiredTokensForUser(userId);
+        deleteExpiredTokensFromSet(userId);
     }
 
     public boolean isBlocked(UUID tokenId) {
@@ -40,22 +42,13 @@ public class BlackListTokenService {
         redisTokenRepository.revokeAllUserTokensFromSet(userId);
     }
 
-    private void deleteExpiredTokensForUser(UUID userId) {
+    private void deleteExpiredTokensFromSet(UUID userId) {
         Set<TokenRedisModel> tokens = redisTokenRepository.getAllUserTokensSet(userId);
-
-        Set<TokenRedisModel> expiredTokens = tokens.stream().
-                filter(token ->
-                        token.getExpireTime().isBefore(timeProvider.now()))
-                .collect(Collectors.toSet());
 
         Set<TokenRedisModel> activeTokens = tokens.stream().
                 filter(token ->
                         token.getExpireTime().isAfter(timeProvider.now()))
                 .collect(Collectors.toSet());
-
-        expiredTokens.forEach(token -> {
-            redisTokenRepository.delete(token.getTokenId());
-        });
 
         redisTokenRepository.setAllUserTokensSet(userId, activeTokens);
     }
