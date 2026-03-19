@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: quingo-app
+  labels:
+    app: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service-container
+          image: artem5252/quingo-auth-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+
+          env:
+            # Database
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: POSTGRES_PASSWORD
+
+            # Redis
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: REDIS_PASSWORD
+
+            # JWT
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: JWT_SECRET
+            - name: JWT_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: JWT_ISSUER
+            - name: JWT_ACCESS_MINUTES
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: JWT_ACCESS_MINUTES
+            - name: JWT_REFRESH_DAYS
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: JWT_REFRESH_DAYS
+
+            # Spring profiles
+#            - name: SPRING_PROFILES_ACTIVE
+#              value: "k8s"
+
+#          livenessProbe:
+#            httpGet:
+#              path: /auth/actuator/health
+#              port: 8080
+#            initialDelaySeconds: 40
+#            periodSeconds: 10
+#            timeoutSeconds: 2
+#            failureThreshold: 3

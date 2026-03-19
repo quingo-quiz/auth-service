@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-redis
+  namespace: quingo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-redis
+  template:
+    metadata:
+      labels:
+        app: auth-redis
+    spec:
+      containers:
+        - name: auth-redis
+          image: redis:8.6-alpine
+          args: ["--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-redis-secret
+                  key: REDIS_PASSWORD
+                  optional: true
+          ports:
+            - containerPort: 6379
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10

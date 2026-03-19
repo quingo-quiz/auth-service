@@ -58,3 +58,5 @@ build/
 
 #Env
 .env
+
+/k8s/secrets/
