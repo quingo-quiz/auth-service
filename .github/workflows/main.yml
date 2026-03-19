@@ -23,7 +23,6 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-        cache-dependency-path: ./auth-service/pom.xml
   
     - name: Testing
       run: mvn clean test --batch-mode
