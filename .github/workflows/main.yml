@@ -10,12 +10,22 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/quingo-auth-service
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6.0.1
+      uses: actions/checkout@v6.0.2
+
+    - name: Cache Maven
+      uses: actions/cache@v5.0.4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-maven-
 
     - name: Set up JDK 21
       uses: actions/setup-java@v5.1.0
@@ -26,11 +36,19 @@ jobs:
   
     - name: Testing
       run: mvn clean test --batch-mode
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: target/surefire-reports/
       
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     
     steps:
     - name: Checkout code
@@ -72,5 +90,12 @@ jobs:
     - name: Deploy to Kubernetes
       run: |
         kubectl set image deployment/auth-service-deployment \
-          auth-service-container=${{ secrets.DOCKER_USERNAME }}/quingo-auth-service:${{ github.sha }}
-     
+          auth-service-container=${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          -n quingo-app --record
+        
+        kubectl rollout status deployment/auth-service-deployment \
+          -n quingo-app --timeout=2m
+    
+    - name: Verify deployment
+      run: |
+        kubectl get pods -n quingo-app -l app=auth-service
