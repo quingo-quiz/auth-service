@@ -17,7 +17,11 @@ interface AuthRoutes {
     @statusCode statusCode: 200;
     @header("Set-Cookie") setCookie?: string[];
     @body body: SuccessResponse<AuthResponseModel>;
-  } | ErrorResponse;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
 
   @summary("Вход")
   @post
@@ -29,7 +33,11 @@ interface AuthRoutes {
     @statusCode statusCode: 200;
     @header("Set-Cookie") setCookie?: string[];
     @body body: SuccessResponse<AuthResponseModel>;
-  } | ErrorResponse;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
 
   @summary("Обновление токена")
   @post
@@ -42,7 +50,11 @@ interface AuthRoutes {
     @statusCode statusCode: 200;
     @header("Set-Cookie") setCookie?: string[];
     @body body: SuccessResponse<AuthResponseModel>;
-  } | ErrorResponse;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
 
   @summary("Выход из системы")
   @post
@@ -55,7 +67,11 @@ interface AuthRoutes {
     @statusCode statusCode: 200;
     @header("Set-Cookie") setCookie?: string[];
     @body body: SuccessResponse<null>;
-  } | ErrorResponse;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
 
   @summary("Выход со всех устройств")
   @post
@@ -64,9 +80,14 @@ interface AuthRoutes {
     @header("Auth-Strategy") strategy?: string = "cookie",
     @header("Cookie") cookie?: string,
     @body request?: RefreshTokenRequest,
-  ): {
+  ):
+  {
     @statusCode statusCode: 200;
     @header("Set-Cookie") setCookie?: string[];
     @body body: SuccessResponse<null>;
-  } | ErrorResponse;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  }
 }

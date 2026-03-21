@@ -2,7 +2,7 @@
 namespace AuthService;
 
 model RegisterRequest {
-  @doc("Тип провайдера, по умолчанию LOCAL")
+  @doc("Тип провайдера")
   provider?: string = "LOCAL";
 
   @minLength(1)
@@ -20,7 +20,7 @@ model RegisterRequest {
 }
 
 model AuthRequest {
-  @doc("Тип провайдера, по умолчанию LOCAL")
+  @doc("Тип провайдера")
   provider?: string = "LOCAL";
 
   @format("email")

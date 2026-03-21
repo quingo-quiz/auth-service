@@ -3,7 +3,7 @@ namespace AuthService;
 model SuccessResponse<T> {
   status: int32;
   statusMessage: string;
-  message: string | null;
+  message: string;
   data: T;
   timestamp: utcDateTime;
 }

@@ -63,8 +63,8 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<SuccessResponse<Void>> logout(
             @CookieValue(name = "refresh_token", required = false) String refreshTokenFromCookie,
-            @RequestBody(required = false) RefreshTokenRequest refreshTokenRequest,
             @CookieValue(name = "access_token", required = false) String accessToken,
+            @RequestBody(required = false) RefreshTokenRequest refreshTokenRequest,
             @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader) {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
