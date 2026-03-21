@@ -13,16 +13,16 @@ import tech.arhr.quingo.auth_service.providers.AuthProviderType;
 public class RegisterRequest {
     private String provider = "LOCAL";
 
-    @Size(min = 1, max = 50)
     @NotNull
+    @Size(min = 1, max = 50)
     private String username;
 
+    @NotNull
     @Email
     @Size(min = 3, max = 100)
-    @NotNull
     private String email;
 
-    @Size(min = 6, max = 50)
     @NotNull
+    @Size(min = 6, max = 50)
     private String password;
 }

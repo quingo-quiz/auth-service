@@ -4,18 +4,305 @@ info:
   version: 0.0.0
 tags: []
 paths:
-  /auth/register:
+  /auth:
     post:
-      operationId: AuthRoutes_register
-      summary: Регистрация нового пользователя
-      parameters: []
+      operationId: AuthRoutes_login
+      summary: Вход
+      parameters:
+        - name: Auth-Strategy
+          in: header
+          required: false
+          schema:
+            type: string
+            default: cookie
       responses:
         '200':
           description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponseModel'
+                type: object
+                required:
+                  - status
+                  - statusMessage
+                  - message
+                  - data
+                  - timestamp
+                properties:
+                  status:
+                    type: integer
+                    format: int32
+                  statusMessage:
+                    type: string
+                  message:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  data:
+                    $ref: '#/components/schemas/AuthResponseModel'
+                  timestamp:
+                    type: string
+                    format: date-time
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+  /logout:
+    post:
+      operationId: AuthRoutes_logout
+      summary: Выход из системы
+      parameters:
+        - name: Auth-Strategy
+          in: header
+          required: false
+          schema:
+            type: string
+            default: cookie
+        - name: Cookie
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - statusMessage
+                  - message
+                  - data
+                  - timestamp
+                properties:
+                  status:
+                    type: integer
+                    format: int32
+                  statusMessage:
+                    type: string
+                  message:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  data:
+                    type: 'null'
+                  timestamp:
+                    type: string
+                    format: date-time
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+  /logout/all:
+    post:
+      operationId: AuthRoutes_logoutAll
+      summary: Выход со всех устройств
+      parameters:
+        - name: Auth-Strategy
+          in: header
+          required: false
+          schema:
+            type: string
+            default: cookie
+        - name: Cookie
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - statusMessage
+                  - message
+                  - data
+                  - timestamp
+                properties:
+                  status:
+                    type: integer
+                    format: int32
+                  statusMessage:
+                    type: string
+                  message:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  data:
+                    type: 'null'
+                  timestamp:
+                    type: string
+                    format: date-time
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+  /refresh:
+    post:
+      operationId: AuthRoutes_refresh
+      summary: Обновление токена
+      parameters:
+        - name: Auth-Strategy
+          in: header
+          required: false
+          schema:
+            type: string
+            default: cookie
+        - name: Cookie
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - statusMessage
+                  - message
+                  - data
+                  - timestamp
+                properties:
+                  status:
+                    type: integer
+                    format: int32
+                  statusMessage:
+                    type: string
+                  message:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  data:
+                    $ref: '#/components/schemas/AuthResponseModel'
+                  timestamp:
+                    type: string
+                    format: date-time
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+  /register:
+    post:
+      operationId: AuthRoutes_register
+      summary: Регистрация
+      parameters:
+        - name: Auth-Strategy
+          in: header
+          required: false
+          schema:
+            type: string
+            default: cookie
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: false
+              schema:
+                type: array
+                items:
+                  type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - statusMessage
+                  - message
+                  - data
+                  - timestamp
+                properties:
+                  status:
+                    type: integer
+                    format: int32
+                  statusMessage:
+                    type: string
+                  message:
+                    anyOf:
+                      - type: string
+                      - type: 'null'
+                  data:
+                    $ref: '#/components/schemas/AuthResponseModel'
+                  timestamp:
+                    type: string
+                    format: date-time
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
       requestBody:
         required: true
         content:
@@ -24,6 +311,25 @@ paths:
               $ref: '#/components/schemas/RegisterRequest'
 components:
   schemas:
+    AuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        provider:
+          type: string
+          description: Тип провайдера, по умолчанию LOCAL
+          default: LOCAL
+        email:
+          type: string
+          minLength: 3
+          maxLength: 100
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 50
     AuthResponseModel:
       type: object
       required:
@@ -34,6 +340,47 @@ components:
           type: string
         refreshToken:
           type: string
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - statusMessage
+        - message
+        - path
+        - method
+        - timestamp
+      properties:
+        status:
+          type: integer
+          format: int32
+        statusMessage:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        fieldErrors:
+          type: object
+          unevaluatedProperties:
+            type: string
+        rejectedValues:
+          type: object
+          unevaluatedProperties: {}
+        details:
+          type: object
+          unevaluatedProperties: {}
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
     RegisterRequest:
       type: object
       required:
@@ -41,6 +388,10 @@ components:
         - email
         - password
       properties:
+        provider:
+          type: string
+          description: Тип провайдера, по умолчанию LOCAL
+          default: LOCAL
         username:
           type: string
           minLength: 1
@@ -49,6 +400,7 @@ components:
           type: string
           minLength: 3
           maxLength: 100
+          format: email
         password:
           type: string
           minLength: 6
