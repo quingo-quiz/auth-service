@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Auth Service
+  version: 0.0.0
+tags: []
+paths:
+  /auth/register:
+    post:
+      operationId: AuthRoutes_register
+      summary: Регистрация нового пользователя
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseModel'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+components:
+  schemas:
+    AuthResponseModel:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          minLength: 3
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 50
+servers:
+  - url: https://api.quiz-platform.com/auth
+    description: Production server
+    variables: {}
