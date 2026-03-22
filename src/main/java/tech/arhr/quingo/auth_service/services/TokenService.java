@@ -29,7 +29,7 @@ public class TokenService {
     @Value("${spring.jwt.secret}")
     private String JWT_SECRET;
 
-    @Value("${spring.application.domain}")
+    @Value("${spring.jwt.issuer}")
     private String ISSUER;
 
     @Value("${spring.jwt.expiration.access-minutes}")

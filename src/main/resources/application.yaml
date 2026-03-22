@@ -1,7 +1,7 @@
 spring:
   application:
     name: auth-service
-    domain: localhost
+    domain: ${APP_DOMAIN}
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
@@ -18,8 +18,8 @@ spring:
       ddl-auto: validate
   jwt:
     secret: ${JWT_SECRET}
+    issuer: ${JWT_ISSUER}
     expiration:
-      issuer: ${JWT_ISSUER}
       access-minutes: ${JWT_ACCESS_MINUTES}
       refresh-days: ${JWT_REFRESH_DAYS}
   main:

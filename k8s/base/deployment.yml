@@ -23,6 +23,12 @@ spec:
             - containerPort: 8080
 
           env:
+            # Main
+            - name: APP_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: APP_DOMAIN
             # Database
             - name: POSTGRES_HOST
               valueFrom:
