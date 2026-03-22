@@ -15,6 +15,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
+import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisModel;
 
 @Configuration
 public class RedisConfiguration {
@@ -37,24 +38,41 @@ public class RedisConfiguration {
         return new LettuceConnectionFactory(config);
     }
 
+    private GenericJackson2JsonRedisSerializer createJsonSerializer() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        objectMapper.activateDefaultTyping(
+                objectMapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+        return new GenericJackson2JsonRedisSerializer(objectMapper);
+    }
+
     @Bean
     public RedisTemplate<String, TokenRedisModel> tokenRedisTemplate() {
         RedisTemplate<String, TokenRedisModel> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
         template.setKeySerializer(new StringRedisSerializer());
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        objectMapper.activateDefaultTyping(
-                objectMapper.getPolymorphicTypeValidator(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
+        GenericJackson2JsonRedisSerializer serializer = createJsonSerializer();
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
 
-        GenericJackson2JsonRedisSerializer serializer =
-                new GenericJackson2JsonRedisSerializer(objectMapper);
+        template.afterPropertiesSet();
+        return template;
+    }
 
+    @Bean
+    public RedisTemplate<String, VerificationTokenRedisModel> verificationTokenRedisTemplate() {
+        RedisTemplate<String, VerificationTokenRedisModel> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory());
+
+        template.setKeySerializer(new StringRedisSerializer());
+
+        GenericJackson2JsonRedisSerializer serializer = createJsonSerializer();
         template.setValueSerializer(serializer);
         template.setHashValueSerializer(serializer);
 

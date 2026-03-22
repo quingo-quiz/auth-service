@@ -7,6 +7,8 @@ import java.util.UUID;
 
 @Data
 public class TokenRedisModel {
+    public static String prefix = "token";
+
     private UUID tokenId;
     private UUID userId;
     private Instant expireTime;

@@ -11,12 +11,14 @@ import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
 import tech.arhr.quingo.auth_service.services.TokenService;
 import tech.arhr.quingo.auth_service.services.UserService;
+import tech.arhr.quingo.auth_service.services.VerificationService;
 
 @Component
 @RequiredArgsConstructor
 public class LocalAuthProvider implements AuthProvider {
     private final TokenService tokenService;
     private final UserService userService;
+    private final VerificationService verificationService;
 
     @Override
     public AuthProviderType getProviderType() {
@@ -41,6 +43,7 @@ public class LocalAuthProvider implements AuthProvider {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         UserDto user = userService.createUser(request);
+        verificationService.sendVerificationToken(user);
 
         return AuthResponse.builder()
                 .accessToken(tokenService.createAccessToken(user))

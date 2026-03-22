@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
+import tech.arhr.quingo.auth_service.data.redis.interfaces.RedisTokenRepository;
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 
 import java.util.Collections;
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 @Repository
 public class RedisTokenRepositoryImpl implements RedisTokenRepository {
     private final RedisTemplate<String, TokenRedisModel> tokenRedisTemplate;
-    private final String TOKEN_PREFIX = "token";
+    private final String TOKEN_PREFIX = TokenRedisModel.prefix;
     private final String USER_PREFIX = "user";
 
     @Value("${spring.jwt.expiration.access-minutes}")
