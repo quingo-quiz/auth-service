@@ -22,6 +22,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -36,6 +37,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        log.info(request.getRequestURI());
+        log.info(request.getMethod());
+
+
         Optional<Cookie> accessCookie = extractTokenCookie(request.getCookies());
         Optional<String> bearerToken = extractBearerToken(request.getHeader("Authorization"));
         String token = null;
@@ -45,6 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } else if (bearerToken.isPresent()) {
             token = bearerToken.get();
         }
+
+        log.info("token: " + token);
 
         if (token != null) {
             try {
@@ -74,6 +81,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (cookies == null || cookies.length == 0) {
             return Optional.empty();
         }
+
+        Arrays.stream(cookies)
+                .forEach(cookie -> log.info(cookie.getName() + " : " + cookie.getValue()));
 
         Optional<Cookie> accessCookie = Arrays.stream(cookies)
                 .filter(cookie -> cookie.getName().equals("access_token"))
