@@ -29,6 +29,11 @@ spec:
                 secretKeyRef:
                   name: auth-service-secret
                   key: APP_DOMAIN
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: SPRING_PROFILES_ACTIVE
             # Database
             - name: POSTGRES_HOST
               valueFrom:
