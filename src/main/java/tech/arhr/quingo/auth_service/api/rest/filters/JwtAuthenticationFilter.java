@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -33,19 +35,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (request.getCookies() == null || request.getCookies().length == 0) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
-        Optional<Cookie> accessCookie = Arrays.stream(request.getCookies())
-                .filter(cookie -> cookie.getName().equals("access_token"))
-                .findFirst();
+        Optional<Cookie> accessCookie = extractTokenCookie(request.getCookies());
+        Optional<String> bearerToken = extractBearerToken(request.getHeader("Authorization"));
+        String token = null;
 
         if (accessCookie.isPresent()) {
+            token = accessCookie.get().getValue();
+        } else if (bearerToken.isPresent()) {
+            token = bearerToken.get();
+        }
+
+        if (token != null) {
             try {
-                authInManager(accessCookie.get().getValue());
-            }catch (AuthException e){
+                authInManager(token);
+            } catch (AuthException e) {
                 SecurityContextHolder.clearContext();
                 authenticationEntryPoint.commence(request, response, new BadCredentialsException(e.getMessage(), e));
                 return;
@@ -64,5 +68,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         AuthenticationManager manager = authenticationConfiguration.getAuthenticationManager();
         Authentication result = manager.authenticate(new JwtAuthenticationToken(token));
         SecurityContextHolder.getContext().setAuthentication(result);
+    }
+
+    private Optional<Cookie> extractTokenCookie(Cookie[] cookies) {
+        if (cookies == null || cookies.length == 0) {
+            return Optional.empty();
+        }
+
+        Optional<Cookie> accessCookie = Arrays.stream(cookies)
+                .filter(cookie -> cookie.getName().equals("access_token"))
+                .findFirst();
+
+        return accessCookie;
+    }
+
+    private Optional<String> extractBearerToken(String authHeader) {
+        if (authHeader == null || authHeader.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            String[] parsed = authHeader.split("\\s");
+            String bearerToken = parsed[1];
+            return Optional.of(bearerToken);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
     }
 }

@@ -3,13 +3,10 @@ package tech.arhr.quingo.auth_service.api.security;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 import tech.arhr.quingo.auth_service.dto.UserDto;
-import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
 import tech.arhr.quingo.auth_service.services.AuthService;
 
 @Slf4j
@@ -22,14 +19,20 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 
         JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
-        String token = jwtAuthenticationToken.getPrincipal().toString();
+        String token = jwtAuthenticationToken.getToken();
         UserDto user = authService.authorize(token);
         JwtUserDetails jwtUserDetails = new JwtUserDetails(user);
 
-        Authentication auth = new UsernamePasswordAuthenticationToken(
+        Authentication auth = new JwtAuthenticationToken(
                 jwtUserDetails,
                 null,
-                jwtUserDetails.getAuthorities());
+                jwtUserDetails.getAuthorities(),
+                user
+        );
+//        Authentication auth = new UsernamePasswordAuthenticationToken(
+//                jwtUserDetails,
+//                null,
+//                jwtUserDetails.getAuthorities());
         return auth;
     }
 
