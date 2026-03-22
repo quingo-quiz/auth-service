@@ -14,6 +14,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VerificationService {
     private final RedisVerificationTokenRepository redisRepository;
+    private final OutboxService outboxService;
     private final VerificationTokenMapper mapper;
 
 
@@ -28,7 +29,8 @@ public class VerificationService {
     }
 
     public void sendVerificationToken(UserDto userDto) {
-        generateToken(userDto);
+        VerificationTokenDto token = generateToken(userDto);
+        outboxService.sendVerifyEmailEvent(userDto, token.getToken());
     }
 
     public boolean validateToken(String token){
