@@ -1,4 +1,4 @@
-package tech.arhr.quingo.auth_service.data.redis;
+package tech.arhr.quingo.auth_service.data.redis.interfaces;
 
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 

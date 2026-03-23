@@ -3,7 +3,7 @@ package tech.arhr.quingo.auth_service.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tech.arhr.quingo.auth_service.data.redis.RedisTokenRepository;
+import tech.arhr.quingo.auth_service.data.redis.interfaces.RedisTokenRepository;
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
