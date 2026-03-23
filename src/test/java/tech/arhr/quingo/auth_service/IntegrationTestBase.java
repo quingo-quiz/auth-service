@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import tech.arhr.quingo.auth_service.initializer.Kafka;
 import tech.arhr.quingo.auth_service.initializer.Postgres;
 import tech.arhr.quingo.auth_service.initializer.Redis;
 
@@ -13,7 +14,8 @@ import tech.arhr.quingo.auth_service.initializer.Redis;
 @ActiveProfiles("test")
 @ContextConfiguration(initializers = {
         Postgres.Initializer.class,
-        Redis.Initializer.class
+        Redis.Initializer.class,
+        Kafka.Initializer.class,
 })
 public abstract class IntegrationTestBase {
 
@@ -24,5 +26,6 @@ public abstract class IntegrationTestBase {
     static void beforeAll() {
         Postgres.postgresContainer.start();
         Redis.redisContainer.start();
+        Kafka.kafkaContainer.start();
     }
 }
