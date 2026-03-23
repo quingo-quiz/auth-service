@@ -1,7 +1,2 @@
 emit:
   - "@typespec/openapi3"
-options:
-  "@typespec/openapi3":
-    emitter-output-dir: "{project-root}/out"
-    openapi-versions:
-      - 3.1.0
