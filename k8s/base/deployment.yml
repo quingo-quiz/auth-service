@@ -78,6 +78,13 @@ spec:
                   name: auth-service-secret
                   key: REDIS_PASSWORD
 
+            # Kafka
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: KAFKA_BOOTSTRAP_SERVERS
+
             # JWT
             - name: JWT_SECRET
               valueFrom:
@@ -100,9 +107,6 @@ spec:
                   name: auth-service-secret
                   key: JWT_REFRESH_DAYS
 
-            # Spring profiles
-#            - name: SPRING_PROFILES_ACTIVE
-#              value: "k8s"
 
 #          livenessProbe:
 #            httpGet:
