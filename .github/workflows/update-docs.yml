@@ -25,7 +25,7 @@ jobs:
           cd typespec
           npm install
           npx tsp compile .
-          cp tsp-output/@typespec/openapi3/openapi.yml ../auth-service.yml    
+          cp tsp-output/@typespec/openapi3/openapi.yaml ../auth-service.yml    
 
       - name: Setup kubectl
         run: |
