@@ -48,7 +48,9 @@ public class SecurityConfiguration {
                                 "/logout",
                                 "/logout/all",
                                 "/refresh",
-                                "/error").permitAll()
+                                "/error"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 

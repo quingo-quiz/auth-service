@@ -42,16 +42,14 @@ paths:
                   statusMessage:
                     type: string
                   message:
-                    anyOf:
-                      - type: string
-                      - type: 'null'
+                    type: string
                   data:
                     $ref: '#/components/schemas/AuthResponseModel'
                   timestamp:
                     type: string
                     format: date-time
-        default:
-          description: An unexpected error response.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
           content:
             application/json:
               schema:
@@ -105,16 +103,14 @@ paths:
                   statusMessage:
                     type: string
                   message:
-                    anyOf:
-                      - type: string
-                      - type: 'null'
+                    type: string
                   data:
                     type: 'null'
                   timestamp:
                     type: string
                     format: date-time
-        default:
-          description: An unexpected error response.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
           content:
             application/json:
               schema:
@@ -168,16 +164,14 @@ paths:
                   statusMessage:
                     type: string
                   message:
-                    anyOf:
-                      - type: string
-                      - type: 'null'
+                    type: string
                   data:
                     type: 'null'
                   timestamp:
                     type: string
                     format: date-time
-        default:
-          description: An unexpected error response.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
           content:
             application/json:
               schema:
@@ -231,16 +225,14 @@ paths:
                   statusMessage:
                     type: string
                   message:
-                    anyOf:
-                      - type: string
-                      - type: 'null'
+                    type: string
                   data:
                     $ref: '#/components/schemas/AuthResponseModel'
                   timestamp:
                     type: string
                     format: date-time
-        default:
-          description: An unexpected error response.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
           content:
             application/json:
               schema:
@@ -289,16 +281,14 @@ paths:
                   statusMessage:
                     type: string
                   message:
-                    anyOf:
-                      - type: string
-                      - type: 'null'
+                    type: string
                   data:
                     $ref: '#/components/schemas/AuthResponseModel'
                   timestamp:
                     type: string
                     format: date-time
-        default:
-          description: An unexpected error response.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
           content:
             application/json:
               schema:
@@ -319,7 +309,7 @@ components:
       properties:
         provider:
           type: string
-          description: Тип провайдера, по умолчанию LOCAL
+          description: Тип провайдера
           default: LOCAL
         email:
           type: string
@@ -390,7 +380,7 @@ components:
       properties:
         provider:
           type: string
-          description: Тип провайдера, по умолчанию LOCAL
+          description: Тип провайдера
           default: LOCAL
         username:
           type: string
