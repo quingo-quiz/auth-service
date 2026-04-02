@@ -55,8 +55,8 @@
 ## 📋 Документация и Мониторинг
 
 После деплоя в кластер инструменты доступны по следующим адресам:
-*   **API Documentation**: https://docs-quingo.arhr.tech/ — здесь можно протестировать все эндпоинты сервиса.
-*   **Kafka UI (Kafdrop)**: https://kafdrop-quingo.arhr.tech/ — просмотр сообщений в топиках Kafka.
+*   **API Documentation**: http://docs-quingo.arhr.tech/ — здесь можно протестировать все эндпоинты сервиса.
+*   **Kafka UI (Kafdrop)**: http://kafdrop-quingo.arhr.tech/ — просмотр сообщений в топиках Kafka.
 *   **Само приложение**: https://quingo.arhr.tech/api/auth — api микросервиса авторизации.
 
 
