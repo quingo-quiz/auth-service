@@ -7,6 +7,7 @@ namespace AuthService;
 
 @route("/")
 interface AuthRoutes {
+  @tag("Auth")
   @summary("Регистрация")
   @post
   @route("/register")
@@ -23,6 +24,7 @@ interface AuthRoutes {
     @body body: ErrorResponse;
   };
 
+  @tag("Auth")
   @summary("Вход")
   @post
   @route("/auth")
@@ -39,6 +41,7 @@ interface AuthRoutes {
     @body body: ErrorResponse;
   };
 
+  @tag("Auth")
   @summary("Обновление токена")
   @post
   @route("/refresh")
@@ -52,10 +55,11 @@ interface AuthRoutes {
     @body body: SuccessResponse<AuthResponseModel>;
   } |
   {
-    @statusCode statusCode: 400;
+    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
   };
 
+  @tag("Auth")
   @summary("Выход из системы")
   @post
   @route("/logout")
@@ -69,10 +73,11 @@ interface AuthRoutes {
     @body body: SuccessResponse<null>;
   } |
   {
-    @statusCode statusCode: 400;
+    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
   };
 
+  @tag("Auth")
   @summary("Выход со всех устройств")
   @post
   @route("/logout/all")
@@ -87,7 +92,20 @@ interface AuthRoutes {
     @body body: SuccessResponse<null>;
   } |
   {
-    @statusCode statusCode: 400;
+    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
-  }
+  };
+
+  @tag("Sessions")
+  @summary("Получить список активных сессий")
+  @get
+  @route("/sessions")
+  listSessions(): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<SessionModel[]>;
+  } |
+  {
+    @statusCode statusCode: 401;
+    @body body: ErrorResponse;
+  };
 }

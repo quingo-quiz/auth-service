@@ -8,6 +8,7 @@ namespace AuthService;
 
 @route("/verify")
 interface VerifyRoutes {
+  @tag("Auth")
   @summary("Подтвердить почту")
   @get
   info(

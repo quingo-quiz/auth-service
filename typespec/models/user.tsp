@@ -1,5 +1,6 @@
 namespace AuthService;
 
+@doc ("Пользователь")
 model User {
   id: uuid;
   username: string;
@@ -7,6 +8,19 @@ model User {
   roles: Roles[];
   emailVerified: boolean;
   accountStatus: AccountStatus;
+}
+
+@doc("Запрос на смену пароля")
+model ChangePasswordRequest {
+  @doc("Текущий пароль")
+  @minLength(6)
+  @maxLength(50)
+  oldPassword: string;
+
+  @doc("Новый пароль")
+  @minLength(6)
+  @maxLength(50)
+  newPassword: string;
 }
 
 
