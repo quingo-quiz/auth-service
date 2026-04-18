@@ -96,13 +96,13 @@ interface AuthRoutes {
     @body body: ErrorResponse;
   };
 
-  @tag("Sessions")
-  @summary("Получить список активных сессий")
+  @tag("Tokens")
+  @summary("Получить список активных токенов")
   @get
-  @route("/sessions")
+  @route("/tokens")
   listSessions(): {
     @statusCode statusCode: 200;
-    @body body: SuccessResponse<SessionModel[]>;
+    @body body: SuccessResponse<TokenModel[]>;
   } |
   {
     @statusCode statusCode: 401;

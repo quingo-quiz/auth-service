@@ -42,3 +42,12 @@ model AuthResponseModel {
   accessToken: string;
   refreshToken: string;
 }
+
+@doc("Информация о токене")
+model TokenModel {
+  @doc("ID токена")
+  tokenId: uuid;
+
+  @doc("Время выдачи")
+  issuedAt: utcDateTime;
+}

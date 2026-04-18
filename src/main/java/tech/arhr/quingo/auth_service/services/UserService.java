@@ -39,6 +39,27 @@ public class UserService {
         return userMapper.toDto(userEntity);
     }
 
+    @Transactional(readOnly = true)
+    public UserDto checkPasswordReturnUser(UUID userId, String password) {
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid userId or password"));
+
+        if (!hasher.verify(password, userEntity.getHashedPassword())) {
+            throw new InvalidCredentialsException("Invalid userId or password");
+        }
+
+        return userMapper.toDto(userEntity);
+    }
+
+    @Transactional
+    public void updateUserPassword(UUID userId, String password){
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        entity.setHashedPassword(hasher.hash(password));
+        userRepository.save(entity);
+    }
+
+
     @Transactional
     public UserDto createUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
