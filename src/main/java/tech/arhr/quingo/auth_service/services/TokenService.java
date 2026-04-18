@@ -216,9 +216,13 @@ public class TokenService {
     }
 
     @Transactional
-    public void  revokeAllUserTokens(UUID userId){
+    public void revokeAllUserTokens(UUID userId){
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
         entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
+        whiteListTokenService.blockAllUserTokens(userId);
+    }
+
+    public void refreshSessions(UUID userId) {
         whiteListTokenService.blockAllUserTokens(userId);
     }
 

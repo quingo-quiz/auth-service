@@ -1,6 +1,7 @@
 package tech.arhr.quingo.auth_service.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
@@ -20,11 +21,22 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
+    private final TokenService tokenService;
     private final JpaUserRepository userRepository;
     private final UserMapper userMapper;
     private final Hasher hasher;
+
+    public UserService(
+            @Lazy TokenService tokenService,
+            JpaUserRepository userRepository,
+            UserMapper userMapper,
+            Hasher hasher) {
+        this.tokenService = tokenService;
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.hasher = hasher;
+    }
 
 
     @Transactional(readOnly = true)
@@ -52,15 +64,6 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUserPassword(UUID userId, String password){
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
-        entity.setHashedPassword(hasher.hash(password));
-        userRepository.save(entity);
-    }
-
-
-    @Transactional
     public UserDto createUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException();
@@ -82,6 +85,43 @@ public class UserService {
 
         userRepository.save(userEntity);
         return userMapper.toDto(userEntity);
+    }
+
+    @Transactional
+    public void updateUserPassword(UUID userId, String password) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        entity.setHashedPassword(hasher.hash(password));
+        userRepository.save(entity);
+    }
+
+    @Transactional
+    public void blockUser(UUID userId) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+
+        entity.setAccountStatus(AccountStatus.BLOCKED);
+        userRepository.save(entity);
+        tokenService.revokeAllUserTokens(userId);
+    }
+
+    @Transactional
+    public void unblockUser(UUID userId) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+
+        entity.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(entity);
+    }
+
+    @Transactional
+    public void changeUserRoles(UUID userId, List<UserRole> userRoles) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+
+        entity.setRoles(userRoles);
+        userRepository.save(entity);
+        tokenService.refreshSessions(userId);
     }
 
     @Transactional(readOnly = true)

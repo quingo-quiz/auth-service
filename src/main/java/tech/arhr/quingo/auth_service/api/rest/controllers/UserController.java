@@ -51,12 +51,4 @@ public class UserController {
                         timeProvider.now()
                 ));
     }
-
-    // for testing permissions
-    @GetMapping("/info/admin")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDto> admin(@CookieValue(name = "access_token") String accessToken) {
-        UserDto user = authService.authorize(accessToken);
-        return ResponseEntity.ok(userService.getUserById(user.getId()));
-    }
 }
