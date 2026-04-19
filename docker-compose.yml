@@ -91,7 +91,6 @@ services:
       auth-service-network:
 
 
-
 networks:
   auth-service-network:
 

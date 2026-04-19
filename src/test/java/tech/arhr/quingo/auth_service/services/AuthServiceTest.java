@@ -14,6 +14,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.providers.AuthProvider;
 import tech.arhr.quingo.auth_service.providers.AuthProviderType;
+import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,12 @@ class AuthServiceTest {
     private TokenService tokenService;
 
     @Mock
+    private TokenMapper tokenMapper;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
     private AuthProvider localAuthProvider;
 
     private AuthService authService;
@@ -36,7 +43,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         when(localAuthProvider.getProviderType()).thenReturn(AuthProviderType.LOCAL);
-        authService = new AuthService(tokenService, List.of(localAuthProvider));
+        authService = new AuthService(tokenService, List.of(localAuthProvider), tokenMapper, userService);
     }
 
     @Test

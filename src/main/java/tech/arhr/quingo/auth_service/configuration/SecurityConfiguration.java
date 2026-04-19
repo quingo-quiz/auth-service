@@ -53,6 +53,7 @@
                             ).permitAll()
     
                             .anyRequest().authenticated()
+                            //.anyRequest().permitAll()
                     )
     
                     .exceptionHandling(exceptions -> exceptions

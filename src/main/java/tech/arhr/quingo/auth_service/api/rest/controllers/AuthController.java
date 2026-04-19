@@ -6,18 +6,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.AuthResponseModel;
 import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
+import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
 import tech.arhr.quingo.auth_service.api.rest.utils.AuthStrategy;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
+import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.exceptions.auth.TokenNotFoundException;
 import tech.arhr.quingo.auth_service.services.AuthService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -83,6 +88,20 @@ public class AuthController {
         String refreshToken = resolveRefreshToken(refreshTokenFromCookie, refreshTokenRequest, strategy);
         authService.logoutAll(refreshToken);
         return createLogoutResponse(strategy);
+    }
+
+    @GetMapping("/tokens")
+    public ResponseEntity<SuccessResponse<List<TokenModel>>> getSessions(){
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+
+        List<TokenModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        tokens,
+                        timeProvider.now()
+                )
+        );
     }
 
 

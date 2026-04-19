@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
@@ -18,9 +19,9 @@ public class VerificationController {
     private final VerificationService verificationService;
     private final TimeProvider timeProvider;
 
-    @GetMapping
+    @GetMapping("/{token}")
     public ResponseEntity<SuccessResponse<Boolean>> verifyToken(
-            @PathParam("token") String token
+            @PathVariable String token
     ) {
         boolean verified = verificationService.validateToken(token);
         HttpStatus status = verified ? HttpStatus.OK : HttpStatus.BAD_REQUEST;

@@ -212,10 +212,25 @@ public class TokenService {
         DecodedJWT jwt = decodeToken(refreshToken);
         UUID userId = UUID.fromString(jwt.getSubject());
 
+        revokeAllUserTokens(userId);
+    }
+
+    @Transactional
+    public void revokeAllUserTokens(UUID userId){
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
         entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
-
         whiteListTokenService.blockAllUserTokens(userId);
+    }
+
+    public void refreshSessions(UUID userId) {
+        whiteListTokenService.blockAllUserTokens(userId);
+    }
+
+    public List<TokenDto> getActiveRefreshTokens(UUID userId) {
+        return tokenRepository.findAllByUserIdAndRevokedAndExpiresAtAfter(userId, false, timeProvider.now())
+                .stream()
+                .map(tokenMapper::toDto)
+                .toList();
     }
 
 }
