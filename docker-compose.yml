@@ -84,6 +84,9 @@ services:
       JWT_ISSUER: ${JWT_ISSUER}
       JWT_ACCESS_MINUTES: ${JWT_ACCESS_MINUTES}
       JWT_REFRESH_DAYS: ${JWT_REFRESH_DAYS}
+
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     ports:
       - "8080:8080"
     restart: on-failure

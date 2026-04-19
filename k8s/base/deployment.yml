@@ -107,6 +107,18 @@ spec:
                   name: auth-service-secret
                   key: JWT_REFRESH_DAYS
 
+            # OAuth2
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GOOGLE_CLIENT_SECRET
+
 
 #          livenessProbe:
 #            httpGet:

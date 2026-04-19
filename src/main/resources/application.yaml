@@ -25,6 +25,18 @@ spring:
     expiration:
       access-minutes: ${JWT_ACCESS_MINUTES}
       refresh-days: ${JWT_REFRESH_DAYS}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
   main:
     allow-circular-references: true
   profiles:
