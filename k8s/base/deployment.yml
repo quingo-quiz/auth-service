@@ -34,6 +34,12 @@ spec:
                 secretKeyRef:
                   name: auth-service-secret
                   key: SPRING_PROFILES_ACTIVE
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: FRONTEND_URL
+
             # Database
             - name: POSTGRES_HOST
               valueFrom:

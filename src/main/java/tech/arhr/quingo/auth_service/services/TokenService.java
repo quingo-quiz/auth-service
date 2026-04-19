@@ -78,6 +78,7 @@ public class TokenService {
                 .withClaim("typ", "access")
                 .withClaim("username", user.getUsername())
                 .withClaim("email", user.getEmail())
+                .withClaim("emailVerified", user.isEmailVerified())
                 .withClaim("roles", roles)
                 .sign(ALGORITHM);
 
@@ -161,11 +162,13 @@ public class TokenService {
         UUID userId = UUID.fromString(jwt.getSubject());
         String username = jwt.getClaim("username").asString();
         String email = jwt.getClaim("email").asString();
+        boolean emailVerified = jwt.getClaim("emailVerified").asBoolean();
         List<UserRole> roles = jwt.getClaim("roles").asList(UserRole.class);
         return UserDto.builder()
                 .id(userId)
                 .username(username)
                 .email(email)
+                .emailVerified(emailVerified)
                 .roles(roles)
                 .build();
     }

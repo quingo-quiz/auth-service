@@ -9,8 +9,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class RegisterRequest {
-    private String provider = "LOCAL";
-
     @NotNull
     @Size(min = 1, max = 50)
     private String username;

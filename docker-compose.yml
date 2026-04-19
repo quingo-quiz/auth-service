@@ -68,6 +68,7 @@ services:
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
       SPRING_PROFILES_ACTIVE: local
+      FRONTEND_URL: ${FRONTEND_URL}
 
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER}

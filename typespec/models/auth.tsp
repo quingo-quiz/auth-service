@@ -2,9 +2,6 @@
 namespace AuthService;
 
 model RegisterRequest {
-  @doc("Тип провайдера")
-  provider?: string = "LOCAL";
-
   @minLength(1)
   @maxLength(50)
   username: string;
@@ -20,9 +17,6 @@ model RegisterRequest {
 }
 
 model AuthRequest {
-  @doc("Тип провайдера")
-  provider?: string = "LOCAL";
-
   @format("email")
   @minLength(3)
   @maxLength(100)

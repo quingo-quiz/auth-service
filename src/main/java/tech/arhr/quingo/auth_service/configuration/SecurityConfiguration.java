@@ -19,6 +19,7 @@ import tech.arhr.quingo.auth_service.api.rest.filters.JwtAuthenticationFilter;
 import tech.arhr.quingo.auth_service.api.security.handlers.CustomAccessDeniedHandler;
 import tech.arhr.quingo.auth_service.api.security.handlers.CustomAuthenticationEntryPoint;
 import tech.arhr.quingo.auth_service.services.oauth2.CustomOAuth2UserService;
+import tech.arhr.quingo.auth_service.services.oauth2.OAuth2FailureHandler;
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2SuccessHandler;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class SecurityConfiguration {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,11 +55,12 @@ public class SecurityConfiguration {
                                         "/logout",
                                         "/logout/all",
                                         "/refresh",
-                                        "/error"
+                                        "/error",
+                                        "/oauth2/authorization/**"
                                 ).permitAll()
 
-                               // .anyRequest().authenticated()
-                        .anyRequest().permitAll()
+                                .anyRequest().authenticated()
+                        //.anyRequest().permitAll()
                 )
 
                 .exceptionHandling(exceptions -> exceptions
@@ -72,6 +75,7 @@ public class SecurityConfiguration {
                                 .userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
 
                 .build();
