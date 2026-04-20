@@ -96,6 +96,32 @@ interface AuthRoutes {
     @body body: ErrorResponse;
   };
 
+  @tag("OAuth2")
+  @summary("Инициализация OAuth2 flow через GitHub")
+  @get
+  @route("/oauth2/authorization/github")
+  oauth2Github(): {
+    @statusCode statusCode: 302;
+    @header("Location") location: string;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
+
+  @tag("OAuth2")
+  @summary("Инициализация OAuth2 flow через Google")
+  @get
+  @route("/oauth2/authorization/google")
+  oauth2Google(): {
+    @statusCode statusCode: 302;
+    @header("Location") location: string;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
+
   @tag("Tokens")
   @summary("Получить список активных токенов")
   @get
