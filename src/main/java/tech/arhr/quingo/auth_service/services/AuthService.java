@@ -13,7 +13,6 @@ import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
-import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
@@ -115,13 +114,9 @@ public class AuthService {
         String oldPassword = request.getOldPassword();
         String newPassword = request.getNewPassword();
 
-        try {
-            userService.checkPasswordReturnUser(userId, oldPassword);
-            userService.updateUserPassword(userId, newPassword);
-            tokenService.revokeAllUserTokens(userId);
-        } catch (InvalidCredentialsException e) {
-            throw new InvalidCredentialsException("Invalid credentials");
-        }
+        userService.checkPasswordReturnUser(userId, oldPassword);
+        userService.updateUserPassword(userId, newPassword);
+        tokenService.revokeAllUserTokens(userId);
     }
 
     @Transactional
@@ -136,8 +131,7 @@ public class AuthService {
         }
     }
 
-    @Transactional
-    protected UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
+    private UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
         try {
             UserDto user = userService.getUserByEmail(userData.getEmail());
             if (!user.isEmailVerified()) {

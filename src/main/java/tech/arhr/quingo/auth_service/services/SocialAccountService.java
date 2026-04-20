@@ -20,6 +20,7 @@ public class SocialAccountService {
     private final JpaSocialAccountRepository socialAccountRepository;
     private final SocialAccountMapper socialAccountMapper;
 
+    @Transactional(readOnly = true)
     public SocialAccountDto findByProviderAndProviderUserId(OAuth2Provider provider, String providerUserId) {
         List<SocialAccountEntity> entities = socialAccountRepository.findByProviderEqualsAndProviderUserIdEquals(provider, providerUserId);
         if (entities.isEmpty()) {throw new EntityNotFoundException("Social account not found");}

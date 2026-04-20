@@ -7,10 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
-import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
-import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
-import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 

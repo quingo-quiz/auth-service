@@ -58,7 +58,6 @@ public class TokenService {
                 .build();
     }
 
-    @Transactional
     public TokenDto createAccessToken(UserDto user) {
         Instant issuedAt = timeProvider.now();
         Instant expiresAt = issuedAt.plusSeconds(60L * ACCESS_EXPIRATION_MINUTES);
@@ -229,6 +228,7 @@ public class TokenService {
         whiteListTokenService.blockAllUserTokens(userId);
     }
 
+    @Transactional(readOnly = true)
     public List<TokenDto> getActiveRefreshTokens(UUID userId) {
         return tokenRepository.findAllByUserIdAndRevokedAndExpiresAtAfter(userId, false, timeProvider.now())
                 .stream()
