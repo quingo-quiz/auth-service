@@ -59,4 +59,4 @@ spring:
 
 server:
   servlet:
-    context-path: /auth
+    context-path: /api/auth
