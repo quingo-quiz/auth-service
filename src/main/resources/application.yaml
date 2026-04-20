@@ -37,6 +37,12 @@ spring:
             scope:
               - email
               - profile
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
 
   main:
     allow-circular-references: true

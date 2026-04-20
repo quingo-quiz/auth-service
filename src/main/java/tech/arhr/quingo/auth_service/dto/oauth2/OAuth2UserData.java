@@ -1,4 +1,4 @@
-package tech.arhr.quingo.auth_service.dto;
+package tech.arhr.quingo.auth_service.dto.oauth2;
 
 import lombok.Builder;
 import lombok.Data;

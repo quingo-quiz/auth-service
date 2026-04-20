@@ -1,12 +1,11 @@
 package tech.arhr.quingo.auth_service.services;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
-import tech.arhr.quingo.auth_service.dto.OAuth2UserData;
+import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
@@ -164,7 +163,6 @@ public class UserService {
         return userMapper.toDto(userEntity);
     }
 
-    @Transactional(readOnly = true)
     public UserDto getUserByEmail(String email) {
         UserEntity userEntity = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));

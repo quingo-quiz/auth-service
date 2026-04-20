@@ -1,11 +1,13 @@
 package tech.arhr.quingo.auth_service.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
-import tech.arhr.quingo.auth_service.dto.OAuth2UserData;
+import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.SocialAccountDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
@@ -131,9 +133,15 @@ public class AuthService {
         }
     }
 
-    private UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
+    @Transactional
+    protected UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
         try {
             UserDto user = userService.getUserByEmail(userData.getEmail());
+            if (!userData.isEmailVerified()) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("none"),
+                        "We can't merge your account with unverified provider account email. Please use password authentication.");
+            }
             if (!user.isEmailVerified()) {
                 userService.clearUserPassword(user.getId());
                 tokenService.revokeAllUserTokens(user.getId());

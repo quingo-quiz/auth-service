@@ -124,6 +124,16 @@ spec:
                 secretKeyRef:
                   name: auth-service-secret
                   key: GOOGLE_CLIENT_SECRET
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GITHUB_CLIENT_ID
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GITHUB_CLIENT_SECRET
 
 
 #          livenessProbe:
