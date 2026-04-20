@@ -1,3 +1,11 @@
 spring:
   application:
     domain: ${APP_DOMAIN}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: "https://${APP_DOMAIN}/api/auth/login/oauth2/code/{registrationId}"
+          github:
+            redirect-uri: "https://${APP_DOMAIN}/api/auth/login/oauth2/code/{registrationId}"
