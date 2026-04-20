@@ -1,23 +1,24 @@
 package tech.arhr.quingo.auth_service.services;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
+import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
+import tech.arhr.quingo.auth_service.dto.SocialAccountDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
-import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
-import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
-import tech.arhr.quingo.auth_service.providers.AuthProvider;
-import tech.arhr.quingo.auth_service.providers.AuthProviderType;
+import tech.arhr.quingo.auth_service.enums.AccountStatus;
+import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
+import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -25,39 +26,46 @@ import java.util.UUID;
 public class AuthService {
     private final TokenService tokenService;
     private final UserService userService;
-    private final List<AuthProvider> authProviders;
+    private final VerificationService verificationService;
     private final TokenMapper tokenMapper;
-
-    private Map<AuthProviderType, AuthProvider> authProviderMap;
+    private final SocialAccountService socialAccountService;
 
     public AuthService(
             TokenService tokenService,
-            List<AuthProvider> authProviders,
             TokenMapper tokenMapper,
-            UserService userService
+            UserService userService,
+            VerificationService verificationService, SocialAccountService socialAccountService
     ) {
         this.tokenService = tokenService;
         this.userService = userService;
-        this.authProviders = authProviders;
         this.tokenMapper = tokenMapper;
-
-        authProviderMap = new HashMap<>();
-
-        authProviders.forEach(authProvider ->
-                authProviderMap.put(authProvider.getProviderType(), authProvider)
-        );
+        this.verificationService = verificationService;
+        this.socialAccountService = socialAccountService;
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest registerRequest) {
-        AuthProvider provider = getAuthProvider(registerRequest.getProvider());
-        return provider.register(registerRequest);
+    public AuthResponse register(RegisterRequest request) {
+        UserDto user = userService.createUser(request);
+        verificationService.sendVerificationToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(tokenService.createAccessToken(user))
+                .refreshToken(tokenService.createRefreshToken(user))
+                .build();
     }
 
     @Transactional
-    public AuthResponse authenticate(AuthRequest authRequest) {
-        AuthProvider provider = getAuthProvider(authRequest.getProvider());
-        return provider.authenticate(authRequest);
+    public AuthResponse authenticate(AuthRequest request) {
+        UserDto user = userService.checkPasswordReturnUser(request.getEmail(), request.getPassword());
+
+        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
+        }
+
+        return AuthResponse.builder()
+                .accessToken(tokenService.createAccessToken(user))
+                .refreshToken(tokenService.createRefreshToken(user))
+                .build();
     }
 
     @Transactional
@@ -108,25 +116,42 @@ public class AuthService {
         String oldPassword = request.getOldPassword();
         String newPassword = request.getNewPassword();
 
+        userService.checkPasswordReturnUser(userId, oldPassword);
+        userService.updateUserPassword(userId, newPassword);
+        tokenService.revokeAllUserTokens(userId);
+    }
+
+    @Transactional
+    public UserDto processOAuth2User(OAuth2UserData userData) {
         try {
-            userService.checkPasswordReturnUser(userId, oldPassword);
-            userService.updateUserPassword(userId, newPassword);
-            tokenService.revokeAllUserTokens(userId);
-        } catch (InvalidCredentialsException e) {
-            throw new InvalidCredentialsException("Invalid credentials");
+            SocialAccountDto account = socialAccountService.findByProviderAndProviderUserId(
+                    userData.getProvider(),
+                    userData.getProviderUserId());
+            return userService.getUserById(account.getUserId());
+        } catch (EntityNotFoundException e){
+            return handleNewSocialAccountLink(userData);
         }
     }
 
-    private AuthProvider getAuthProvider(String authProviderType) {
+    @Transactional
+    protected UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
         try {
-            AuthProviderType type = AuthProviderType.valueOf(authProviderType.toUpperCase());
-            AuthProvider authProvider = authProviderMap.get(type);
-
-            if (authProvider == null)
-                throw new AuthException("Auth provider not supported");
-            return authProvider;
-        } catch (IllegalArgumentException e) {
-            throw new AuthException("Invalid Auth Provider Type: " + authProviderType);
+            UserDto user = userService.getUserByEmail(userData.getEmail());
+            if (!userData.isEmailVerified()) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error("none"),
+                        "We can't merge your account with unverified provider account email. Please use password authentication.");
+            }
+            if (!user.isEmailVerified()) {
+                userService.clearUserPassword(user.getId());
+                tokenService.revokeAllUserTokens(user.getId());
+            }
+            socialAccountService.linkSocialAccount(userData, user.getId());
+            return user;
+        } catch (EntityNotFoundException e1) {
+            UserDto user = userService.createUserFromOAuth2(userData);
+            socialAccountService.linkSocialAccount(userData, user.getId());
+            return user;
         }
     }
 }

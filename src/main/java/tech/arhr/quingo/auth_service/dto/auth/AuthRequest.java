@@ -11,8 +11,6 @@ import org.hibernate.validator.constraints.Range;
 @Data
 @NoArgsConstructor
 public class AuthRequest {
-    private String provider = "LOCAL";
-
     @NotNull
     @Size(min = 3, max = 100)
     @Email

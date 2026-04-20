@@ -1,11 +1,11 @@
 package tech.arhr.quingo.auth_service.services;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
+import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
@@ -88,10 +88,41 @@ public class UserService {
     }
 
     @Transactional
+    public UserDto createUserFromOAuth2(OAuth2UserData userData) {
+        if (userRepository.existsByEmail(userData.getEmail())) {
+            throw new EmailAlreadyExistsException();
+        }
+
+        if (userRepository.existsByUsername(userData.getUsername())) {
+            throw new UsernameAlreadyExistsException();
+        }
+
+        UserEntity userEntity = UserEntity.builder()
+                .username(userData.getUsername())
+                .email(userData.getEmail())
+                .hashedPassword(null)
+                .roles(List.of(UserRole.USER))
+                .emailVerified(userData.isEmailVerified())
+                .accountStatus(AccountStatus.ACTIVE)
+                .build();
+
+        userRepository.save(userEntity);
+        return userMapper.toDto(userEntity);
+    }
+
+    @Transactional
     public void updateUserPassword(UUID userId, String password) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
         entity.setHashedPassword(hasher.hash(password));
+        userRepository.save(entity);
+    }
+
+    @Transactional
+    public void clearUserPassword(UUID userId) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        entity.setHashedPassword(null);
         userRepository.save(entity);
     }
 
@@ -127,6 +158,13 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto getUserById(UUID id) {
         UserEntity userEntity = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        return userMapper.toDto(userEntity);
+    }
+
+    public UserDto getUserByEmail(String email) {
+        UserEntity userEntity = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         return userMapper.toDto(userEntity);

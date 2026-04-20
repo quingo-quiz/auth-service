@@ -3,6 +3,11 @@
     {
       "name": "spring.jwt.issuer",
       "type": "java.lang.String",
-      "description": "Issuer of jwt tokens"
-  }
-] }
+      "description": "Issuer of jwt tokens."
+    },
+    {
+      "name": "spring.application.frontend-url",
+      "type": "java.lang.String",
+      "description": "Frontend url link."
+    }
+  ] }

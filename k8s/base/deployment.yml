@@ -34,6 +34,12 @@ spec:
                 secretKeyRef:
                   name: auth-service-secret
                   key: SPRING_PROFILES_ACTIVE
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: FRONTEND_URL
+
             # Database
             - name: POSTGRES_HOST
               valueFrom:
@@ -106,6 +112,28 @@ spec:
                 secretKeyRef:
                   name: auth-service-secret
                   key: JWT_REFRESH_DAYS
+
+            # OAuth2
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GOOGLE_CLIENT_SECRET
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GITHUB_CLIENT_ID
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: GITHUB_CLIENT_SECRET
 
 
 #          livenessProbe:
