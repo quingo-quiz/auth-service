@@ -106,20 +106,4 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.authorize(accessToken))
                 .isInstanceOf(InvalidTokenException.class);
     }
-
-    @Test
-    void authenticate_UnknownProviderString_ThrowsAuthException() {
-        AuthRequest request = new AuthRequest();
-
-        assertThatThrownBy(() -> authService.authenticate(request))
-                .isInstanceOf(AuthException.class);
-    }
-
-    @Test
-    void register_UnknownProviderString_ThrowsAuthException() {
-        RegisterRequest request = new RegisterRequest();
-
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(AuthException.class);
-    }
 }

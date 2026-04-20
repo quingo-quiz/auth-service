@@ -53,7 +53,7 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse authenticate(AuthRequest request) {
         UserDto user = userService.checkPasswordReturnUser(request.getEmail(), request.getPassword());
 
