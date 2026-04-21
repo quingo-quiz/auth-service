@@ -30,7 +30,7 @@ interface AdminUserRoutes {
     @path userId: uuid,
   ): {
     @statusCode statusCode: 200;
-    @body body: SuccessResponse<User>;
+    @body body: SuccessResponse<null>;
   } |
   {
     @statusCode statusCode: 400 | 401 | 403;
@@ -46,7 +46,7 @@ interface AdminUserRoutes {
     @body request: RoleUpdateRequest,
   ): {
     @statusCode statusCode: 200;
-    @body body: SuccessResponse<User>;
+    @body body: SuccessResponse<null>;
   } |
   {
     @statusCode statusCode: 400 | 401 | 403;

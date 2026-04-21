@@ -22,6 +22,9 @@ spring:
     allow-circular-references: true
   flyway:
     enabled: false
+  security:
+    encryption:
+      key: "245fdab414d6fpemt3asbr1eoipr8a2s"
 
 server:
   servlet:

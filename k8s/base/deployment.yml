@@ -135,6 +135,12 @@ spec:
                   name: auth-service-secret
                   key: GITHUB_CLIENT_SECRET
 
+            # Encryption
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: ENCRYPTION_KEY
 
 #          livenessProbe:
 #            httpGet:

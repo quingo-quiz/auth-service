@@ -20,7 +20,7 @@ interface AuthRoutes {
     @body body: SuccessResponse<AuthResponseModel>;
   } |
   {
-    @statusCode statusCode: 400;
+    @statusCode statusCode: 400 | 409;
     @body body: ErrorResponse;
   };
 
@@ -37,7 +37,11 @@ interface AuthRoutes {
     @body body: SuccessResponse<AuthResponseModel>;
   } |
   {
-    @statusCode statusCode: 400;
+    @statusCode statusCode: 403;
+    @body body: SuccessResponse<AuthResponseModel>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
   };
 
@@ -132,6 +136,23 @@ interface AuthRoutes {
   } |
   {
     @statusCode statusCode: 401;
+    @body body: ErrorResponse;
+  };
+
+  @tag("MFA")
+  @summary("Проверка OTP кода в рамках 2FA flow")
+  @post
+  @route("/mfa/otp/verify")
+  otpVerify(
+    @header("Auth-Strategy") strategy?: string = "cookie",
+    @body request: OtpVerifyRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @header("Set-Cookie") setCookie?: string[];
+    @body body: SuccessResponse<AuthResponseModel>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
   };
 }

@@ -124,6 +124,37 @@ public class TokenService {
         return tokenDto;
     }
 
+    public TokenDto createMfaTempToken(UserDto user) {
+        Instant issuedAt = timeProvider.now();
+        Instant expiresAt = issuedAt.plusSeconds(60L * 5);
+        UUID id = UUID.randomUUID();
+
+        String token = JWT.create()
+                .withSubject(user.getId().toString())
+                .withIssuer(ISSUER)
+                .withAudience(ISSUER)
+                .withIssuedAt(issuedAt)
+                .withExpiresAt(expiresAt)
+                .withJWTId(id.toString())
+                .withClaim("typ", "mfa_token")
+                .sign(ALGORITHM);
+
+        return TokenDto.builder()
+                .id(id)
+                .token(token)
+                .issuedAt(issuedAt)
+                .expiresAt(expiresAt)
+                .build();
+    }
+
+    public UUID validateMfaTempToken(String token) {
+        DecodedJWT jwt = decodeToken(token);
+        if (!"mfa_token".equals(jwt.getClaim("typ").asString())) {
+            throw new InvalidTokenException("Invalid token type");
+        }
+        return UUID.fromString(jwt.getSubject());
+    }
+
     public void validateAccessToken(String accessToken) {
         DecodedJWT jwt = decodeToken(accessToken);
         UUID jti = UUID.fromString(jwt.getClaim("jti").asString());

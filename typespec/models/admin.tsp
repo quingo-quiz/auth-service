@@ -6,5 +6,5 @@ namespace AuthService;
 model RoleUpdateRequest {
   @doc("Новый набор ролей")
   @minItems(1)
-  roles: Roles[];
+  userRoles: Roles[];
 }
