@@ -10,6 +10,7 @@ import tech.arhr.quingo.auth_service.dto.auth.OtpConnectDto;
 import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.enums.MfaType;
 import tech.arhr.quingo.auth_service.exceptions.auth.MfaFailedException;
+import tech.arhr.quingo.auth_service.exceptions.auth.MfaSettingsInvalidException;
 import tech.arhr.quingo.auth_service.utils.EncryptionUtil;
 
 import java.util.List;
@@ -43,12 +44,12 @@ public class MfaService {
     public void verifyConnectingOtp(UserDto user, OtpVerifyRequest request) {
         List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(user.getId(), MfaType.OTP);
         if (entities.isEmpty()) {
-            throw new MfaFailedException("2FA settings for OTP method not found");
+            throw new MfaSettingsInvalidException("2FA settings for OTP method not found");
         }
         UserMfaSettingsEntity entity = entities.getFirst();
-        String secret = encryptionUtil.decrypt(entity.getSecretKey());
+        String encryptedSecret = entity.getSecretKey();
 
-        if (!otpService.verifyCode(secret, request.getCode())) {
+        if (!otpService.verifyCode(encryptedSecret, request.getCode())) {
             throw new MfaFailedException("2FA code verification failed");
         }
 
@@ -60,16 +61,16 @@ public class MfaService {
     public void verifyOtpCode(UserDto user, OtpVerifyRequest request) {
         List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(user.getId(), MfaType.OTP);
         if (entities.isEmpty()) {
-            throw new MfaFailedException("2FA settings for OTP method not found");
+            throw new MfaSettingsInvalidException("2FA settings for OTP method not found");
         }
         UserMfaSettingsEntity entity = entities.getFirst();
-        String secret = encryptionUtil.decrypt(entity.getSecretKey());
+        String encriptedSecret = entity.getSecretKey();
 
         if (!entity.isMethodEnabled()) {
-            throw new MfaFailedException("2FA OTP method is not enabled");
+            throw new MfaSettingsInvalidException("2FA OTP method is not enabled");
         }
 
-        if (!otpService.verifyCode(secret, request.getCode())) {
+        if (!otpService.verifyCode(encriptedSecret, request.getCode())) {
             throw new MfaFailedException("2FA code verification failed");
         }
     }

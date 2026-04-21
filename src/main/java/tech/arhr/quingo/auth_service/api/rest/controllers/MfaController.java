@@ -34,15 +34,15 @@ public class MfaController {
         ));
     }
 
-//    @PostMapping("/otp/verify")
-//    public ResponseEntity<SuccessResponse<Void>> otpVerify(@Valid @RequestBody OtpVerifyRequest request) {
-//        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-//        mfaService.verifyOtpCode(auth.getUser(), request);
-//
-//        return ResponseEntity.ok(SuccessResponse.of(
-//                HttpStatus.OK,
-//                null,
-//                timeProvider.now()
-//        ));
-//    }
+    @PostMapping("/otp/verify")
+    public ResponseEntity<SuccessResponse<Void>> otpVerify(@Valid @RequestBody OtpVerifyRequest request) {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        mfaService.verifyOtpCode(auth.getUser(), request);
+
+        return ResponseEntity.ok(SuccessResponse.of(
+                HttpStatus.OK,
+                null,
+                timeProvider.now()
+        ));
+    }
 }
