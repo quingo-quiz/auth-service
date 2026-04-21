@@ -33,8 +33,24 @@ model RefreshTokenRequest {
 }
 
 model AuthResponseModel {
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
+  mfaTempToken?: string;
+  mfaRequired: boolean;
+}
+
+model OtpVerifyRequest {
+  @minLength(1)
+  @maxLength(32)
+  code: string;
+
+  @minLength(1)
+  @maxLength(500)
+  mfaTempToken?: string;
+}
+
+model OtpConnectDto {
+  secretUri: string;
 }
 
 @doc("Информация о токене")

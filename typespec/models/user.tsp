@@ -7,6 +7,7 @@ model User {
   email: string;
   roles: Roles[];
   emailVerified: boolean;
+  mfaEnabled: boolean;
   accountStatus: AccountStatus;
 }
 
