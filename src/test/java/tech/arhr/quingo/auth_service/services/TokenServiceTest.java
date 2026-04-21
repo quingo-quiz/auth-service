@@ -192,4 +192,47 @@ class TokenServiceTest {
         assertThatThrownBy(() -> tokenService.decodeToken(tokenFromOtherService))
                 .isInstanceOf(InvalidTokenException.class);
     }
+
+    @Test
+    void validateMfaTempToken_TokkenValid_ReturnsUserId() {
+        TokenDto token = tokenService.createMfaTempToken(defaultUser);
+
+        UUID userId = tokenService.validateMfaTempToken(token.getToken());
+
+        assertThat(userId).isEqualTo(defaultUser.getId());
+    }
+
+    @Test
+    void validateMfaTempToken_WithAccessToken_ThrowsInvalidTokenException() {
+        String accessToken = tokenService.createAccessToken(defaultUser).getToken();
+
+        assertThatThrownBy(() -> tokenService.validateMfaTempToken(accessToken))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessageContaining("Invalid token type");
+    }
+
+    @Test
+    void blockAccessToken_ValidToken_DelegatesToWhiteListBlock() {
+        TokenDto access = tokenService.createAccessToken(defaultUser);
+        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
+
+        tokenService.blockAccessToken(access.getToken());
+
+        verify(whiteListTokenService).blockToken(access.getId());
+    }
+
+    @Test
+    void revokeAllUserTokens_ByUserId_MarksAllAsRevokedAndBlocksWhitelist() {
+        UUID userId = UUID.randomUUID();
+        TokenEntity first = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
+        TokenEntity second = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
+
+        when(jpaTokenRepository.findAllByUserId(userId)).thenReturn(List.of(first, second));
+
+        tokenService.revokeAllUserTokens(userId);
+
+        assertThat(first.isRevoked()).isTrue();
+        assertThat(second.isRevoked()).isTrue();
+        verify(whiteListTokenService).blockAllUserTokens(userId);
+    }
 }
