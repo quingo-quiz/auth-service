@@ -9,6 +9,7 @@ import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
+import tech.arhr.quingo.auth_service.services.mfa.MfaService;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.UUID;
@@ -35,11 +36,14 @@ class AuthServiceTest {
     @Mock
     private VerificationService verificationService;
 
+    @Mock
+    private MfaService mfaService;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(tokenService, tokenMapper, userService,  verificationService, socialAccountService);
+        authService = new AuthService(tokenService, tokenMapper, userService,  verificationService, socialAccountService, mfaService);
     }
 
     @Test

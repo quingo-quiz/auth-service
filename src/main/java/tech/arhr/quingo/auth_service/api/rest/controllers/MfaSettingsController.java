@@ -1,6 +1,5 @@
 package tech.arhr.quingo.auth_service.api.rest.controllers;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,14 +18,15 @@ import tech.arhr.quingo.auth_service.utils.TimeProvider;
 @RestController
 @RequestMapping("/mfa")
 @RequiredArgsConstructor
-public class MfaController {
+public class MfaSettingsController {
     private final MfaService mfaService;
     private final TimeProvider timeProvider;
 
     @PostMapping("/otp/connect")
-    public ResponseEntity<SuccessResponse<OtpConnectDto>> otpInit() {
+    public ResponseEntity<SuccessResponse<OtpConnectDto>> otpConnect() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         OtpConnectDto dto = mfaService.connectOtp(auth.getUser());
+
         return ResponseEntity.ok(SuccessResponse.of(
                 HttpStatus.OK,
                 dto,
@@ -34,10 +34,11 @@ public class MfaController {
         ));
     }
 
-    @PostMapping("/otp/verify")
-    public ResponseEntity<SuccessResponse<Void>> otpVerify(@Valid @RequestBody OtpVerifyRequest request) {
+    @PostMapping("/otp/connect/confirm")
+    public ResponseEntity<SuccessResponse<OtpConnectDto>> otpConfirm(@RequestBody OtpVerifyRequest request) {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-        mfaService.verifyOtpCode(auth.getUser(), request);
+        mfaService.verifyConnectingOtp(auth.getUser(), request);
+
 
         return ResponseEntity.ok(SuccessResponse.of(
                 HttpStatus.OK,

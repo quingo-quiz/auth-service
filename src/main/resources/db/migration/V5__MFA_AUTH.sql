@@ -9,4 +9,4 @@ CREATE TABLE user_mfa_settings
 );
 
 ALTER TABLE users
-    ADD mfa_enabled BOOLEAN;
+    ADD mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE;

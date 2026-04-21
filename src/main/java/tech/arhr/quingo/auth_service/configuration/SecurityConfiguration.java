@@ -56,7 +56,8 @@ public class SecurityConfiguration {
                                         "/logout/all",
                                         "/refresh",
                                         "/error",
-                                        "/oauth2/authorization/**"
+                                        "/oauth2/authorization/**",
+                                        "/mfa/otp/verify"
                                 ).permitAll()
 
                                 .anyRequest().authenticated()

@@ -13,4 +13,6 @@ import tech.arhr.quingo.auth_service.dto.TokenDto;
 public class AuthResponse {
     private TokenDto accessToken;
     private TokenDto refreshToken;
+    private TokenDto mfaTempToken;
+    private boolean mfaRequired = false;
 }

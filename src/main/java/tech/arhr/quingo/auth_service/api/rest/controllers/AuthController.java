@@ -17,6 +17,7 @@ import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
+import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.exceptions.auth.TokenNotFoundException;
 import tech.arhr.quingo.auth_service.services.AuthService;
@@ -91,7 +92,7 @@ public class AuthController {
     }
 
     @GetMapping("/tokens")
-    public ResponseEntity<SuccessResponse<List<TokenModel>>> getSessions(){
+    public ResponseEntity<SuccessResponse<List<TokenModel>>> getSessions() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
         List<TokenModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
@@ -104,25 +105,49 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/mfa/otp/verify")
+    public ResponseEntity<SuccessResponse<AuthResponseModel>> otpVerify(
+            @Valid @RequestBody OtpVerifyRequest request,
+            @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader) {
+
+        AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
+        AuthResponse response = authService.verifyOtpIssueTokens(request);
+
+        return createSuccessAuthResponse(response, strategy);
+    }
+
 
     private ResponseEntity<SuccessResponse<AuthResponseModel>> createSuccessAuthResponse(
             AuthResponse authResponse, AuthStrategy strategy) {
 
+        HttpStatus status = authResponse.isMfaRequired()? HttpStatus.FORBIDDEN : HttpStatus.OK;
+
+        if (authResponse.isMfaRequired()) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(SuccessResponse.of(
+                            status,
+                            AuthResponseModel.from(authResponse),
+                            timeProvider.now()
+                    ));
+        }
 
         if (strategy.isJson()) {
             return ResponseEntity
-                    .ok()
-                    .body(SuccessResponse.of(HttpStatus.OK,
+                    .status(status)
+                    .body(SuccessResponse.of(
+                            status,
                             AuthResponseModel.from(authResponse),
                             timeProvider.now()));
         } else {
             ResponseCookie accessCookie = createCookie.createAccessCookie(authResponse.getAccessToken());
             ResponseCookie refreshCookie = createCookie.createRefreshCookie(authResponse.getRefreshToken());
             return ResponseEntity
-                    .ok()
+                    .status(status)
                     .header("Set-Cookie", accessCookie.toString())
                     .header("Set-Cookie", refreshCookie.toString())
-                    .body(SuccessResponse.of(HttpStatus.OK,
+                    .body(SuccessResponse.of(
+                            status,
                             null,
                             timeProvider.now()));
         }

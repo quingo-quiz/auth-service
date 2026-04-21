@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
+import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.SocialAccountDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -16,6 +17,7 @@ import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
+import tech.arhr.quingo.auth_service.services.mfa.MfaService;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class AuthService {
     private final TokenService tokenService;
     private final UserService userService;
     private final VerificationService verificationService;
+    private final MfaService mfaService;
     private final TokenMapper tokenMapper;
     private final SocialAccountService socialAccountService;
 
@@ -34,12 +37,15 @@ public class AuthService {
             TokenService tokenService,
             TokenMapper tokenMapper,
             UserService userService,
-            VerificationService verificationService, SocialAccountService socialAccountService
+            VerificationService verificationService,
+            SocialAccountService socialAccountService,
+            MfaService mfaService
     ) {
         this.tokenService = tokenService;
         this.userService = userService;
         this.tokenMapper = tokenMapper;
         this.verificationService = verificationService;
+        this.mfaService = mfaService;
         this.socialAccountService = socialAccountService;
     }
 
@@ -61,6 +67,26 @@ public class AuthService {
         if (user.getAccountStatus() != AccountStatus.ACTIVE) {
             throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
         }
+
+        if (user.isMfaEnabled()) {
+            return AuthResponse.builder()
+                    .mfaTempToken(tokenService.createMfaTempToken(user))
+                    .mfaRequired(true)
+                    .build();
+        }
+
+        return AuthResponse.builder()
+                .accessToken(tokenService.createAccessToken(user))
+                .refreshToken(tokenService.createRefreshToken(user))
+                .build();
+    }
+
+    @Transactional
+    public AuthResponse verifyOtpIssueTokens(OtpVerifyRequest request) {
+        UUID userId = tokenService.validateMfaTempToken(request.getMfaTempToken());
+        mfaService.verifyOtpCode(userId, request);
+
+        UserDto user = userService.getUserById(userId);
 
         return AuthResponse.builder()
                 .accessToken(tokenService.createAccessToken(user))
@@ -128,7 +154,7 @@ public class AuthService {
                     userData.getProvider(),
                     userData.getProviderUserId());
             return userService.getUserById(account.getUserId());
-        } catch (EntityNotFoundException e){
+        } catch (EntityNotFoundException e) {
             return handleNewSocialAccountLink(userData);
         }
     }
