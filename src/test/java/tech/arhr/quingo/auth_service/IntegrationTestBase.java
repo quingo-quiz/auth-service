@@ -22,8 +22,7 @@ public abstract class IntegrationTestBase {
     @LocalServerPort
     protected int port;
 
-    @BeforeAll
-    static void beforeAll() {
+    static {
         Postgres.postgresContainer.start();
         Redis.redisContainer.start();
         Kafka.kafkaContainer.start();

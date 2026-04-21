@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
+import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
@@ -16,6 +17,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.UsernameAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
+import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.UserMapper;
 
@@ -30,6 +32,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
+    @Mock
+    private TokenService tokenService;
+
     @Mock
     private UserMapper userMapper;
 
@@ -220,5 +225,134 @@ class UserServiceTest {
         assertThat(saved.getRoles()).containsExactly(UserRole.USER);
         assertThat(saved.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(saved.isEmailVerified()).isFalse();
+    }
+
+    @Test
+    void checkPasswordReturnUserById_ValidCredentials_ReturnsUserDto() {
+        UUID userId = UUID.randomUUID();
+        String rawPassword = "secret";
+        String hashedPassword = "hashed-secret";
+
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+        entity.setHashedPassword(hashedPassword);
+
+        UserDto expected = UserDto.builder().id(userId).build();
+
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(hasher.verify(rawPassword, hashedPassword)).thenReturn(true);
+        when(userMapper.toDto(entity)).thenReturn(expected);
+
+        UserDto result = userService.checkPasswordReturnUser(userId, rawPassword);
+
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
+    void updateUserPassword_UserExists_SavesHashedPassword() {
+        UUID userId = UUID.randomUUID();
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+        when(hasher.hash("newPassword")).thenReturn("hashed-newPassword");
+
+        userService.updateUserPassword(userId, "newPassword");
+
+        assertThat(entity.getHashedPassword()).isEqualTo("hashed-newPassword");
+        verify(jpaUserRepository).save(entity);
+    }
+
+    @Test
+    void clearUserPassword_UserExists_SetsPasswordToNull() {
+        UUID userId = UUID.randomUUID();
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+        entity.setHashedPassword("hashed");
+
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+
+        userService.clearUserPassword(userId);
+
+        assertThat(entity.getHashedPassword()).isNull();
+        verify(jpaUserRepository).save(entity);
+    }
+
+    @Test
+    void blockUser_UserExists_SetsBlockedAndRevokesSessions() {
+        UUID userId = UUID.randomUUID();
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+        entity.setAccountStatus(AccountStatus.ACTIVE);
+
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+
+        userService.blockUser(userId);
+
+        assertThat(entity.getAccountStatus()).isEqualTo(AccountStatus.BLOCKED);
+        verify(jpaUserRepository).save(entity);
+        verify(tokenService).revokeAllUserTokens(userId);
+    }
+
+    @Test
+    void unblockUser_UserExists_SetsActive() {
+        UUID userId = UUID.randomUUID();
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+        entity.setAccountStatus(AccountStatus.BLOCKED);
+
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+
+        userService.unblockUser(userId);
+
+        assertThat(entity.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+        verify(jpaUserRepository).save(entity);
+    }
+
+    @Test
+    void changeUserRoles_UserExists_UpdatesRolesAndRefreshesSessions() {
+        UUID userId = UUID.randomUUID();
+        UserEntity entity = new UserEntity();
+        entity.setId(userId);
+
+        List<UserRole> newRoles = List.of(UserRole.ADMIN, UserRole.USER);
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
+
+        userService.changeUserRoles(userId, newRoles);
+
+        assertThat(entity.getRoles()).containsExactly(UserRole.ADMIN, UserRole.USER);
+        verify(jpaUserRepository).save(entity);
+        verify(tokenService).refreshSessions(userId);
+    }
+
+    @Test
+    void createUserFromOAuth2_ValidData_SavesAndReturnsDto() {
+        OAuth2UserData userData = OAuth2UserData.builder()
+                .email("oauth@test.com")
+                .username("oauth-user")
+                .emailVerified(true)
+                .provider(OAuth2Provider.GOOGLE)
+                .providerUserId("provider-id")
+                .build();
+
+        UserDto expected = UserDto.builder().id(UUID.randomUUID()).email("oauth@test.com").build();
+
+        when(jpaUserRepository.existsByEmail(userData.getEmail())).thenReturn(false);
+        when(jpaUserRepository.existsByUsername(userData.getUsername())).thenReturn(false);
+        when(jpaUserRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userMapper.toDto(any(UserEntity.class))).thenReturn(expected);
+
+        UserDto result = userService.createUserFromOAuth2(userData);
+
+        assertThat(result).isEqualTo(expected);
+        ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(jpaUserRepository).save(captor.capture());
+        UserEntity saved = captor.getValue();
+
+        assertThat(saved.getEmail()).isEqualTo("oauth@test.com");
+        assertThat(saved.getUsername()).isEqualTo("oauth-user");
+        assertThat(saved.getHashedPassword()).isNull();
+        assertThat(saved.isEmailVerified()).isTrue();
+        assertThat(saved.getRoles()).containsExactly(UserRole.USER);
     }
 }
