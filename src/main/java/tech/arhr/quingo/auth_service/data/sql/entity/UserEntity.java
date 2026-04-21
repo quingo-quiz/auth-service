@@ -39,4 +39,7 @@ public class UserEntity {
 
     @Column(name = "status")
     private AccountStatus accountStatus;
+
+    @Column(name = "mfa_enabled")
+    private boolean mfaEnabled;
 }

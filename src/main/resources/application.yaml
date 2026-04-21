@@ -28,6 +28,8 @@ spring:
       refresh-days: ${JWT_REFRESH_DAYS}
 
   security:
+    encryption:
+      key: ${ENCRYPTION_KEY}
     oauth2:
       client:
         registration:

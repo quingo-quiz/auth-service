@@ -9,5 +9,10 @@
       "name": "spring.application.frontend-url",
       "type": "java.lang.String",
       "description": "Frontend url link."
+    },
+    {
+      "name": "spring.security.encryption.key",
+      "type": "java.lang.String",
+      "description": "Encryption key for Encryption Util."
     }
   ] }
