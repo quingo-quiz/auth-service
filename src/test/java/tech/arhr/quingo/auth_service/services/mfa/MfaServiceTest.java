@@ -16,6 +16,7 @@ import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.enums.MfaType;
 import tech.arhr.quingo.auth_service.exceptions.auth.MfaFailedException;
 import tech.arhr.quingo.auth_service.exceptions.auth.MfaSettingsInvalidException;
+import tech.arhr.quingo.auth_service.services.UserService;
 import tech.arhr.quingo.auth_service.utils.EncryptionUtil;
 
 import java.util.List;
@@ -33,7 +34,7 @@ class MfaServiceTest {
     private JpaMfaSettingsRepository mfaSettingsRepository;
 
     @Mock
-    private JpaUserRepository userRepository;
+    private UserService userService;
 
     @Mock
     private OtpService otpService;
@@ -45,31 +46,18 @@ class MfaServiceTest {
 
     @BeforeEach
     void setUp() {
-        mfaService = new MfaService(mfaSettingsRepository, userRepository, otpService, encryptionUtil);
+        mfaService = new MfaService(mfaSettingsRepository, userService, otpService, encryptionUtil);
     }
 
     @Test
-    void connectOtp_ReplacesExistingSettingsAndReturnsUri() {
+    void connectOtp_PasswordMissed_ThrowException() {
         UUID userId = UUID.randomUUID();
         UserDto user = UserDto.builder().id(userId).email("user@test.com").build();
 
-        when(otpService.generateSecret()).thenReturn("plain-secret");
-        when(otpService.createUriForSecret("plain-secret", "user@test.com")).thenReturn("otpauth://uri");
-        when(encryptionUtil.encrypt("plain-secret")).thenReturn("encrypted-secret");
+        when(userService.isPasswordSetForUser(userId)).thenReturn(false);
 
-        OtpConnectDto response = mfaService.connectOtp(user);
-
-        assertThat(response.getSecretUri()).isEqualTo("otpauth://uri");
-        verify(mfaSettingsRepository).deleteByUserIdEqualsAndType(userId, MfaType.OTP);
-
-        ArgumentCaptor<UserMfaSettingsEntity> captor = ArgumentCaptor.forClass(UserMfaSettingsEntity.class);
-        verify(mfaSettingsRepository).save(captor.capture());
-        UserMfaSettingsEntity saved = captor.getValue();
-
-        assertThat(saved.getUserId()).isEqualTo(userId);
-        assertThat(saved.getType()).isEqualTo(MfaType.OTP);
-        assertThat(saved.getSecretKey()).isEqualTo("encrypted-secret");
-        assertThat(saved.isMethodEnabled()).isFalse();
+        assertThatThrownBy(() -> mfaService.connectOtp(user))
+                .isInstanceOf(MfaSettingsInvalidException.class);
     }
 
     @Test
@@ -142,18 +130,16 @@ class MfaServiceTest {
                 .secretKey("encrypted")
                 .methodEnabled(false)
                 .build();
-        UserEntity userEntity = UserEntity.builder().id(userId).mfaEnabled(false).build();
+        UserDto userDto = UserDto.builder().id(userId).mfaEnabled(false).build();
 
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
         when(otpService.verifyCode("encrypted", "654321")).thenReturn(true);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(userEntity));
 
         mfaService.verifyConnectingOtp(user, request);
 
         assertThat(settings.isMethodEnabled()).isTrue();
-        assertThat(userEntity.isMfaEnabled()).isTrue();
         verify(mfaSettingsRepository).save(settings);
-        verify(userRepository).save(userEntity);
+        verify(userService).setMfaEnabledForUser(userId);
     }
 
     @Test
