@@ -29,10 +29,11 @@ public class UserController {
     public ResponseEntity<SuccessResponse<UserDto>> info() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
+        UserDto user = userService.getUserById(auth.getUser().getId());
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,
-                        auth.getUser(),
+                        user,
                         timeProvider.now()
                 ));
     }

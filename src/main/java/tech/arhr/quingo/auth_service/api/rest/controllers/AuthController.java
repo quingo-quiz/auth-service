@@ -91,7 +91,7 @@ public class AuthController {
         return createLogoutResponse(strategy);
     }
 
-    @GetMapping("/tokens")
+    @GetMapping("/sessions")
     public ResponseEntity<SuccessResponse<List<TokenModel>>> getSessions() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
