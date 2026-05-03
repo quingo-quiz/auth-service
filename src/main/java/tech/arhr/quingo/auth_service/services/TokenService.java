@@ -9,9 +9,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tech.arhr.quingo.auth_service.api.security.ClientContext;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
+import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
@@ -48,6 +50,7 @@ public class TokenService {
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
     private final TimeProvider timeProvider;
+    private final ClientContext clientContext;
 
     @PostConstruct
     public void init() {
@@ -116,10 +119,21 @@ public class TokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .userDto(user)
+                .userAgentInfo(clientContext.getUserAgentInfo())
                 .build();
 
         TokenEntity tokenEntity = tokenMapper.toEntity(tokenDto);
         tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
+
+        if (clientContext.getUserAgentInfo() != null){
+            UserAgentInfoDto info = clientContext.getUserAgentInfo();
+
+            tokenEntity.setBrowser(info.getBrowser());
+            tokenEntity.setOs(info.getOs());
+            tokenEntity.setDevice(info.getDevice());
+            tokenEntity.setIpAddress(info.getIpAddress());
+        }
+
         tokenRepository.save(tokenEntity);
         return tokenDto;
     }
@@ -266,5 +280,4 @@ public class TokenService {
                 .map(tokenMapper::toDto)
                 .toList();
     }
-
 }

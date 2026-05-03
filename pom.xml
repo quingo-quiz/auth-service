@@ -143,6 +143,12 @@
             <version>1.7.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.ua-parser</groupId>
+            <artifactId>uap-java</artifactId>
+            <version>1.6.1</version>
+        </dependency>
+
         <!-- Testing -->
 
         <dependency>

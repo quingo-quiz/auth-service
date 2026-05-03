@@ -19,4 +19,6 @@ public class TokenDto {
     private Instant expiresAt;
     private boolean revoked;
     private UserDto userDto;
+
+    private UserAgentInfoDto userAgentInfo;
 }
