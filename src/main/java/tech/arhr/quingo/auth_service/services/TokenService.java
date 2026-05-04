@@ -6,6 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TokenService {
@@ -134,6 +136,7 @@ public class TokenService {
             tokenEntity.setDevice(info.getDevice());
             tokenEntity.setIpAddress(info.getIpAddress());
         }
+        log.info("Creating refresh with context: {}", clientContext.toString());
 
         tokenRepository.save(tokenEntity);
         return tokenDto;

@@ -5,27 +5,35 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tech.arhr.quingo.auth_service.api.security.ClientContext;
 
 import java.io.IOException;
 
 @Slf4j
 @Component
 public class RequestsLogFilter extends OncePerRequestFilter {
+    @Autowired
+    private ClientContext context;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         log.info("=== New Request ===");
 
         log.info("IP: {}", request.getRemoteAddr());
-        log.info("UserAgent: {}", request.getHeader("User-Agent"));
-        log.info("Path: {}", request.getContextPath());
-        request.getHeaderNames().asIterator().forEachRemaining(key -> {
-            log.info("header: {}", key);
-        });
+        log.info("Endpoint: {}", request.getRequestURI());
+        //log.info("UserAgent: {}", request.getHeader("User-Agent"));
+//        request.getHeaderNames().asIterator().forEachRemaining(key -> {
+//            log.info("header: {}", key);
+//        });
 
-        log.info("===================");
+
 
         filterChain.doFilter(request, response);
+
+        log.info("Context: {}", context.toString());
+        log.info("===================");
     }
 }
