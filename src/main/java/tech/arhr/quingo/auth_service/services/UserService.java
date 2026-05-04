@@ -12,6 +12,7 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
+import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
@@ -26,16 +27,18 @@ import java.util.UUID;
 @Service
 public class UserService {
     private final TokenService tokenService;
+    private final VerificationService verificationService;
     private final JpaUserRepository userRepository;
     private final UserMapper userMapper;
     private final Hasher hasher;
 
     public UserService(
-            @Lazy TokenService tokenService,
+            @Lazy TokenService tokenService, VerificationService verificationService,
             JpaUserRepository userRepository,
             UserMapper userMapper,
             Hasher hasher) {
         this.tokenService = tokenService;
+        this.verificationService = verificationService;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.hasher = hasher;
@@ -197,5 +200,14 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         return userMapper.toDto(userEntity);
+    }
+
+    @Transactional
+    public void verifyEmail(String token) {
+        UUID userId = verificationService.getUserIdIfTokenExists(token, VerificationTokenType.VERIFY_EMAIL);
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        userEntity.setEmailVerified(true);
+        userRepository.save(userEntity);
     }
 }

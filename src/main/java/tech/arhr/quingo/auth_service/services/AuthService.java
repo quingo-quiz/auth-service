@@ -52,7 +52,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         UserDto user = userService.createUser(request);
-        verificationService.sendVerificationToken(user);
+        verificationService.sendVerificationEmail(user);
 
         return AuthResponse.builder()
                 .accessToken(tokenService.createAccessToken(user))

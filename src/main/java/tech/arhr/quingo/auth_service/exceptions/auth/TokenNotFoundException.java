@@ -9,6 +9,6 @@ public class TokenNotFoundException extends AuthException {
         super(message);
     }
     public TokenNotFoundException() {
-        super("JWT token not found");
+        super("Token not found");
     }
 }
