@@ -138,7 +138,6 @@ public class TokenService {
             tokenEntity.setDevice(userInfo.getDevice());
             tokenEntity.setIpAddress(userInfo.getIpAddress());
         }
-        log.info("Creating refresh with context: {}", userInfo.toString());
 
         tokenRepository.save(tokenEntity);
         return tokenDto;

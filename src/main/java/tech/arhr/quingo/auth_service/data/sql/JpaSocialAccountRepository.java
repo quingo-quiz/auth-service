@@ -14,4 +14,6 @@ import java.util.UUID;
 public interface JpaSocialAccountRepository extends JpaRepository<SocialAccountEntity, UUID> {
 
     List<SocialAccountEntity> findByProviderEqualsAndProviderUserIdEquals(OAuth2Provider provider, String providerUserId);
+
+    List<SocialAccountEntity> findByUserId(UUID userId);
 }

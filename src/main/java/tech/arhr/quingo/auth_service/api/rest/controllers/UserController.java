@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
+import tech.arhr.quingo.auth_service.dto.SecurityStatusDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
+import tech.arhr.quingo.auth_service.services.SecurityService;
 import tech.arhr.quingo.auth_service.services.UserService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 
@@ -24,6 +26,7 @@ public class UserController {
     private final AuthService authService;
     private final UserService userService;
     private final TimeProvider timeProvider;
+    private final SecurityService securityService;
 
     @GetMapping("/info")
     public ResponseEntity<SuccessResponse<UserDto>> info() {
@@ -49,6 +52,19 @@ public class UserController {
                 SuccessResponse.of(
                         HttpStatus.OK,
                         null,
+                        timeProvider.now()
+                ));
+    }
+
+    @GetMapping("/security-status")
+    public ResponseEntity<SuccessResponse<SecurityStatusDto>> getSecurityStatus() {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        SecurityStatusDto status = securityService.getUserSecurityStatus(auth.getUser().getId());
+
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        status,
                         timeProvider.now()
                 ));
     }

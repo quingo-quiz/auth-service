@@ -20,7 +20,6 @@ public class RequestsLogFilter extends OncePerRequestFilter {
 
         log.info("IP: {}", request.getRemoteAddr());
         log.info("Endpoint: {}", request.getRequestURI());
-        log.info("UserAgent: {}", request.getHeader("User-Agent"));
 //        request.getHeaderNames().asIterator().forEachRemaining(key -> {
 //            log.info("header: {}", key);
 //        });

@@ -16,6 +16,7 @@ import tech.arhr.quingo.auth_service.utils.EncryptionUtil;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -90,5 +91,12 @@ public class MfaService {
         if (!otpService.verifyCode(encriptedSecret, request.getCode())) {
             throw new MfaFailedException("2FA code verification failed");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<MfaType> getUserMfaTypes(UUID userId) {
+        return mfaSettingsRepository.findByUserId(userId).stream()
+                .map(UserMfaSettingsEntity::getType)
+                .collect(Collectors.toList());
     }
 }
