@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -75,9 +76,9 @@ public class SecurityConfiguration {
                         .accessDeniedHandler(customAccessDeniedHandler)
                 )
 
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(clientContextFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(requestsLogFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(requestsLogFilter, DisableEncodeUrlFilter.class)
+                .addFilterAfter(clientContextFilter, RequestsLogFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter, ClientContextFilter.class)
 
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
