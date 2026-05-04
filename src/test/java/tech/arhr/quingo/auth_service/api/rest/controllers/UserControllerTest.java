@@ -22,6 +22,7 @@ class UserControllerTest extends BaseRestApiTest {
                 .when()
                 .get("/user/info")
                 .then()
+                .log().all()
                 .statusCode(200)
                 .body("data.email", equalTo(user.email()))
                 .body("data.username", equalTo(user.username()));
@@ -43,6 +44,7 @@ class UserControllerTest extends BaseRestApiTest {
                 .when()
                 .post("/user/change-password")
                 .then()
+                .log().all()
                 .statusCode(200);
 
         given()

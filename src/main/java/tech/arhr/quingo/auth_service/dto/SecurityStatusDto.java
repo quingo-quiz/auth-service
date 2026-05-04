@@ -1,26 +1,23 @@
 package tech.arhr.quingo.auth_service.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
+import tech.arhr.quingo.auth_service.enums.MfaType;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 
 import java.util.List;
 import java.util.UUID;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
-@Builder
-public class UserDto {
-    private UUID id;
-    private String username;
+public class SecurityStatusDto {
+    private UUID userId;
     private String email;
-    private List<UserRole> roles;
     private boolean emailVerified;
+    private boolean passwordSet;
     private boolean mfaEnabled;
+    private List<MfaType> mfaTypes;
+    private List<UserRole> roles;
+    private List<OAuth2Provider> linkedProviders;
     private AccountStatus accountStatus;
 }

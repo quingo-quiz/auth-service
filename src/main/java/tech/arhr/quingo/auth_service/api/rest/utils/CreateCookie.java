@@ -32,7 +32,7 @@ public class CreateCookie {
         return createCookie(
                 "access_token",
                 accessToken.getToken(),
-                "/",
+                "/api",
                 ACCESS_EXPIRATION_MINUTES * 60L);
     }
 
@@ -40,7 +40,7 @@ public class CreateCookie {
         return createCookie(
                 "access_token",
                 "null",
-                "/",
+                "/api",
                 0L);
     }
 
@@ -48,7 +48,7 @@ public class CreateCookie {
         return createCookie(
                 "refresh_token",
                 refreshToken.getToken(),
-                "/auth",
+                "/api/auth",
                 REFRESH_EXPIRATION_DAYS * 24 * 60 * 60L);
     }
 
@@ -56,7 +56,7 @@ public class CreateCookie {
         return createCookie(
                 "refresh_token",
                 "null",
-                "/auth",
+                "/api/auth",
                 0L);
     }
 }

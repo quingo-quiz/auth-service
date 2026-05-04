@@ -6,15 +6,21 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.api.security.CustomWebAuthenticationDetails;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
+import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
+import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
@@ -23,6 +29,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TokenService {
@@ -96,6 +103,8 @@ public class TokenService {
 
     @Transactional
     public TokenDto createRefreshToken(UserDto user) {
+        UserAgentInfoDto userInfo = getClientInfoFromContext();
+
         Instant issuedAt = timeProvider.now();
         Instant expiresAt = issuedAt.plusSeconds(60L * 60 * 24 * REFRESH_EXPIRATION_DAYS);
         UUID id = UUID.randomUUID();
@@ -116,10 +125,20 @@ public class TokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .userDto(user)
+                .userAgentInfo(userInfo)
                 .build();
 
         TokenEntity tokenEntity = tokenMapper.toEntity(tokenDto);
         tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
+
+
+        if (userInfo != null){
+            tokenEntity.setBrowser(userInfo.getBrowser());
+            tokenEntity.setOs(userInfo.getOs());
+            tokenEntity.setDevice(userInfo.getDevice());
+            tokenEntity.setIpAddress(userInfo.getIpAddress());
+        }
+
         tokenRepository.save(tokenEntity);
         return tokenDto;
     }
@@ -232,6 +251,23 @@ public class TokenService {
         }
     }
 
+    @Transactional
+    public void revokeRefreshTokenById(String refreshToken, UUID tokenId) {
+        validateRefreshToken(refreshToken);
+        DecodedJWT jwt = decodeToken(refreshToken);
+        UUID userTokenId = UUID.fromString(jwt.getClaim("jti").asString());
+        TokenEntity userTokenEntity = tokenRepository.findById(userTokenId).orElse(null);
+
+        TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
+        if (tokenEntity != null && userTokenEntity != null) {
+            if (userTokenEntity.getIssuedAt().isAfter(tokenEntity.getIssuedAt()))
+                throw new PermissionDeniedException("You can't revoke sessions older than yours");
+            tokenEntity.setRevoked(true);
+        } else {
+            throw new InvalidTokenException("Token not found");
+        }
+    }
+
     public void blockAccessToken(String token) {
         validateAccessToken(token);
         DecodedJWT jwt = decodeToken(token);
@@ -267,4 +303,11 @@ public class TokenService {
                 .toList();
     }
 
+    private UserAgentInfoDto getClientInfoFromContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof CustomWebAuthenticationDetails details) {
+            return details.getUserAgentInfo();
+        }
+        return new UserAgentInfoDto();
+    }
 }

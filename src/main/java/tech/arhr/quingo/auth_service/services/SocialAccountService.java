@@ -13,6 +13,7 @@ import tech.arhr.quingo.auth_service.utils.SocialAccountMapper;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,5 +36,12 @@ public class SocialAccountService {
                 .provider(userData.getProvider())
                 .build();
         socialAccountRepository.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OAuth2Provider> getUserLinkedProviders(UUID userId){
+        return socialAccountRepository.findByUserId(userId).stream()
+                .map(SocialAccountEntity::getProvider)
+                .collect(Collectors.toList());
     }
 }

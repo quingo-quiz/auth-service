@@ -1,5 +1,7 @@
 package tech.arhr.quingo.auth_service.services;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,7 @@ import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
 import tech.arhr.quingo.auth_service.exceptions.auth.UsernameAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
@@ -44,6 +47,9 @@ public class UserService {
         UserEntity userEntity = userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
+        if (userEntity.getHashedPassword() == null) {
+            throw new PasswordNotSetException();
+        }
         if (!hasher.verify(password, userEntity.getHashedPassword())) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
@@ -111,6 +117,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public void updateUserPassword(UUID userId, String password) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
@@ -119,6 +126,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public void clearUserPassword(UUID userId) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
@@ -127,6 +135,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public void blockUser(UUID userId) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
@@ -137,6 +146,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public void unblockUser(UUID userId) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
@@ -146,6 +156,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public void changeUserRoles(UUID userId, List<UserRole> userRoles) {
         UserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
@@ -155,7 +166,24 @@ public class UserService {
         tokenService.refreshSessions(userId);
     }
 
+    @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
+    public void setMfaEnabledForUser(UUID userId) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        entity.setMfaEnabled(true);
+        userRepository.save(entity);
+    }
+
     @Transactional(readOnly = true)
+    public boolean isPasswordSetForUser(UUID userId) {
+        UserEntity entity = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return entity.getHashedPassword() != null;
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "users:cached", key = "#id")
     public UserDto getUserById(UUID id) {
         UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -163,6 +191,7 @@ public class UserService {
         return userMapper.toDto(userEntity);
     }
 
+    @Cacheable(value = "users:cached", key = "#email")
     public UserDto getUserByEmail(String email) {
         UserEntity userEntity = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));

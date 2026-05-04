@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -17,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tech.arhr.quingo.auth_service.api.security.CustomAuthenticationDetailsSource;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.exceptions.auth.AuthException;
 
@@ -30,6 +33,7 @@ import java.util.Optional;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthenticationConfiguration authenticationConfiguration;
     private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAuthenticationDetailsSource detailsSource;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -49,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
-                authInManager(token);
+                authInManager(request, token);
             } catch (AuthException e) {
                 SecurityContextHolder.clearContext();
                 authenticationEntryPoint.commence(request, response, new BadCredentialsException(e.getMessage(), e));
@@ -65,9 +69,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @SneakyThrows
-    private void authInManager(String token) {
+    private void authInManager(HttpServletRequest request, String token) {
         AuthenticationManager manager = authenticationConfiguration.getAuthenticationManager();
-        Authentication result = manager.authenticate(new JwtAuthenticationToken(token));
+
+        JwtAuthenticationToken authenticationRequest = new JwtAuthenticationToken(token);
+        authenticationRequest.setDetails(detailsSource.buildDetails(request));
+
+        Authentication result = manager.authenticate(authenticationRequest);
         SecurityContextHolder.getContext().setAuthentication(result);
     }
 

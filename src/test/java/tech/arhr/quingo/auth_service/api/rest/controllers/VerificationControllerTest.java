@@ -41,6 +41,7 @@ class VerificationControllerTest extends BaseRestApiTest {
                 .when()
                 .get("/verify/not-existing-token")
                 .then()
+                .log().all()
                 .statusCode(400)
                 .body("data", equalTo(false));
     }
@@ -58,6 +59,7 @@ class VerificationControllerTest extends BaseRestApiTest {
                 .when()
                 .get("/verify/{token}", verificationToken)
                 .then()
+                .log().all()
                 .statusCode(200)
                 .body("data", equalTo(true));
     }

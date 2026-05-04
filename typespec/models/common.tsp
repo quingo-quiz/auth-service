@@ -21,3 +21,6 @@ model ErrorResponse {
   rejectedValues?: Record<unknown>;
   details?: Record<unknown>;
 }
+
+@format("uuid")
+scalar uuid extends string;

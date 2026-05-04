@@ -27,4 +27,13 @@ public class TokenEntity {
 
     @ManyToOne
     private UserEntity user;
+
+    @Column(length = 100)
+    private String browser;
+    @Column(length = 100)
+    private String os;
+    @Column(length = 100)
+    private String device;
+    @Column(length = 100, name = "ip_address")
+    private String ipAddress;
 }
