@@ -1,32 +1,25 @@
 package tech.arhr.quingo.auth_service.configuration;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.session.DisableEncodeUrlFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import tech.arhr.quingo.auth_service.api.rest.filters.ClientContextFilter;
 import tech.arhr.quingo.auth_service.api.rest.filters.JwtAuthenticationFilter;
 import tech.arhr.quingo.auth_service.api.rest.filters.RequestsLogFilter;
-import tech.arhr.quingo.auth_service.api.security.ClientContext;
+import tech.arhr.quingo.auth_service.api.security.CustomAuthenticationDetailsSource;
 import tech.arhr.quingo.auth_service.api.security.handlers.CustomAccessDeniedHandler;
 import tech.arhr.quingo.auth_service.api.security.handlers.CustomAuthenticationEntryPoint;
 import tech.arhr.quingo.auth_service.services.oauth2.CustomOAuth2UserService;
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2FailureHandler;
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2SuccessHandler;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -35,11 +28,11 @@ import java.util.List;
 public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RequestsLogFilter requestsLogFilter;
-    private final ClientContextFilter clientContextFilter;
 
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomAuthenticationDetailsSource customAuthenticationDetailsSource;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
 
@@ -71,16 +64,26 @@ public class SecurityConfiguration {
                         //.anyRequest().permitAll()
                 )
 
+                .anonymous(anonymous -> anonymous
+                        .withObjectPostProcessor(new ObjectPostProcessor<AnonymousAuthenticationFilter>() {
+                            @Override
+                            public <O extends AnonymousAuthenticationFilter> O postProcess(O filter) {
+                                filter.setAuthenticationDetailsSource(customAuthenticationDetailsSource);
+                                return filter;
+                            }
+                        })
+                )
+
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler(customAccessDeniedHandler)
                 )
 
-                .addFilterBefore(requestsLogFilter, DisableEncodeUrlFilter.class)
-                .addFilterAfter(clientContextFilter, RequestsLogFilter.class)
-                .addFilterAfter(jwtAuthenticationFilter, ClientContextFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(requestsLogFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .oauth2Login(oauth2 -> oauth2
+                        .authenticationDetailsSource(customAuthenticationDetailsSource)
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )

@@ -8,7 +8,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import tech.arhr.quingo.auth_service.api.security.ClientContext;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
@@ -48,9 +47,6 @@ class TokenServiceTest {
     @Mock
     private WhiteListTokenService whiteListTokenService;
 
-    @Mock
-    private ClientContext clientContext;
-
     @InjectMocks
     private TokenService tokenService;
 
@@ -72,7 +68,6 @@ class TokenServiceTest {
                 .build();
 
         lenient().when(timeProvider.now()).thenReturn(Instant.now());
-        clientContext = new ClientContext();
     }
 
 
@@ -185,7 +180,7 @@ class TokenServiceTest {
 
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
-        TokenService otherService = new TokenService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider, clientContext);
+        TokenService otherService = new TokenService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider);
         ReflectionTestUtils.setField(otherService, "JWT_SECRET", "other-secret");
         ReflectionTestUtils.setField(otherService, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherService, "ACCESS_EXPIRATION_MINUTES", 15);

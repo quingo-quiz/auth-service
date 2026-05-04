@@ -8,11 +8,13 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.api.security.ClientContext;
-import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.api.security.CustomWebAuthenticationDetails;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
+import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -53,7 +55,6 @@ public class TokenService {
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
     private final TimeProvider timeProvider;
-    private final ClientContext clientContext;
 
     @PostConstruct
     public void init() {
@@ -102,6 +103,8 @@ public class TokenService {
 
     @Transactional
     public TokenDto createRefreshToken(UserDto user) {
+        UserAgentInfoDto userInfo = getClientInfoFromContext();
+
         Instant issuedAt = timeProvider.now();
         Instant expiresAt = issuedAt.plusSeconds(60L * 60 * 24 * REFRESH_EXPIRATION_DAYS);
         UUID id = UUID.randomUUID();
@@ -122,21 +125,20 @@ public class TokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .userDto(user)
-                .userAgentInfo(clientContext.getUserAgentInfo())
+                .userAgentInfo(userInfo)
                 .build();
 
         TokenEntity tokenEntity = tokenMapper.toEntity(tokenDto);
         tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
 
-        if (clientContext.getUserAgentInfo() != null){
-            UserAgentInfoDto info = clientContext.getUserAgentInfo();
 
-            tokenEntity.setBrowser(info.getBrowser());
-            tokenEntity.setOs(info.getOs());
-            tokenEntity.setDevice(info.getDevice());
-            tokenEntity.setIpAddress(info.getIpAddress());
+        if (userInfo != null){
+            tokenEntity.setBrowser(userInfo.getBrowser());
+            tokenEntity.setOs(userInfo.getOs());
+            tokenEntity.setDevice(userInfo.getDevice());
+            tokenEntity.setIpAddress(userInfo.getIpAddress());
         }
-        log.info("Creating refresh with context: {}", clientContext.toString());
+        log.info("Creating refresh with context: {}", userInfo.toString());
 
         tokenRepository.save(tokenEntity);
         return tokenDto;
@@ -300,5 +302,13 @@ public class TokenService {
                 .stream()
                 .map(tokenMapper::toDto)
                 .toList();
+    }
+
+    private UserAgentInfoDto getClientInfoFromContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof CustomWebAuthenticationDetails details) {
+            return details.getUserAgentInfo();
+        }
+        return new UserAgentInfoDto();
     }
 }

@@ -5,20 +5,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import tech.arhr.quingo.auth_service.api.security.ClientContext;
 
 import java.io.IOException;
 
 @Slf4j
 @Component
 public class RequestsLogFilter extends OncePerRequestFilter {
-    @Autowired
-    private ClientContext context;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -35,7 +29,6 @@ public class RequestsLogFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
 
-        log.info("Context: {}", context.toString());
         log.info("===================");
     }
 }
