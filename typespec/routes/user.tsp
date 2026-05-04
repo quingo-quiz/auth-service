@@ -36,4 +36,17 @@ interface UserRoutes {
     @statusCode statusCode: 400 | 401 | 403;
     @body body: ErrorResponse;
   };
+
+  @tag("User")
+  @summary("Получить статус безопасности пользователя")
+  @get
+  @route("/security-status")
+  getSecurityStatus(): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<SecurityStatusDto>;
+  } |
+  {
+    @statusCode statusCode: 401;
+    @body body: ErrorResponse;
+  };
 }

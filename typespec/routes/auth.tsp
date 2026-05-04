@@ -100,6 +100,54 @@ interface AuthRoutes {
     @body body: ErrorResponse;
   };
 
+  @tag("Auth")
+  @summary("Завершить сессию по ID токена")
+  @delete
+  @route("/logout/{tokenId}")
+  logoutToken(
+    @path tokenId: uuid,
+    @header("Auth-Strategy") strategy?: string = "cookie",
+    @header("Cookie") cookie?: string,
+    @body request?: RefreshTokenRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
+    @body body: ErrorResponse;
+  };
+
+  @tag("Auth")
+  @summary("Получить активные сессии")
+  @get
+  @route("/sessions")
+  getSessions(): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<TokenModel[]>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
+    @body body: ErrorResponse;
+  };
+
+  @tag("Auth")
+  @summary("Проверка OTP кода в рамках 2FA flow")
+  @post
+  @route("/mfa/otp/verify")
+  otpVerify(
+    @header("Auth-Strategy") strategy?: string = "cookie",
+    @body request: OtpVerifyRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @header("Set-Cookie") setCookie?: string[];
+    @body body: SuccessResponse<AuthResponseModel>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
+    @body body: ErrorResponse;
+  };
+
   @tag("OAuth2")
   @summary("Инициализация OAuth2 flow через GitHub")
   @get
@@ -123,36 +171,6 @@ interface AuthRoutes {
   } |
   {
     @statusCode statusCode: 400;
-    @body body: ErrorResponse;
-  };
-
-  @tag("Tokens")
-  @summary("Получить список активных токенов")
-  @get
-  @route("/tokens")
-  listSessions(): {
-    @statusCode statusCode: 200;
-    @body body: SuccessResponse<TokenModel[]>;
-  } |
-  {
-    @statusCode statusCode: 401;
-    @body body: ErrorResponse;
-  };
-
-  @tag("MFA")
-  @summary("Проверка OTP кода в рамках 2FA flow")
-  @post
-  @route("/mfa/otp/verify")
-  otpVerify(
-    @header("Auth-Strategy") strategy?: string = "cookie",
-    @body request: OtpVerifyRequest,
-  ): {
-    @statusCode statusCode: 200;
-    @header("Set-Cookie") setCookie?: string[];
-    @body body: SuccessResponse<AuthResponseModel>;
-  } |
-  {
-    @statusCode statusCode: 400 | 401;
     @body body: ErrorResponse;
   };
 }

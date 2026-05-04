@@ -11,7 +11,7 @@ interface VerifyRoutes {
   @tag("Auth")
   @summary("Подтвердить почту")
   @get
-  info(
+  verify(
       @path token: string
   ): {
     @statusCode statusCode: 200;

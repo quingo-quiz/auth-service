@@ -36,5 +36,41 @@ enum AccountStatus{
     DELETED
 }
 
-@format("uuid")
-scalar uuid extends string;
+@doc("Статус безопасности пользователя")
+model SecurityStatusDto {
+  @doc("ID пользователя")
+  userId: uuid;
+
+  @doc("Email пользователя")
+  email: string;
+
+  @doc("Подтвержден ли email")
+  emailVerified: boolean;
+
+  @doc("Установлен ли пароль")
+  passwordSet: boolean;
+
+  @doc("Включена ли MFA")
+  mfaEnabled: boolean;
+
+  @doc("Типы MFA")
+  mfaTypes: MfaType[];
+
+  @doc("Роли пользователя")
+  roles: Roles[];
+
+  @doc("Связанные OAuth2 провайдеры")
+  linkedProviders: OAuth2Provider[];
+
+  @doc("Статус аккаунта")
+  accountStatus: AccountStatus;
+}
+
+enum MfaType {
+  OTP
+}
+
+enum OAuth2Provider {
+  GOOGLE,
+  GITHUB
+}
