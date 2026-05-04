@@ -119,6 +119,11 @@ public class AuthService {
     }
 
     @Transactional
+    public void logoutTokenById(String refreshToken, UUID tokenId) {
+        tokenService.revokeRefreshTokenById(refreshToken, tokenId);
+    }
+
+    @Transactional
     public void logoutAll(String refreshToken) {
         tokenService.revokeAllUserTokens(refreshToken);
     }

@@ -17,6 +17,7 @@ import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
@@ -240,6 +241,23 @@ public class TokenService {
         UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
         TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
         if (tokenEntity != null) {
+            tokenEntity.setRevoked(true);
+        } else {
+            throw new InvalidTokenException("Token not found");
+        }
+    }
+
+    @Transactional
+    public void revokeRefreshTokenById(String refreshToken, UUID tokenId) {
+        validateRefreshToken(refreshToken);
+        DecodedJWT jwt = decodeToken(refreshToken);
+        UUID userTokenId = UUID.fromString(jwt.getClaim("jti").asString());
+        TokenEntity userTokenEntity = tokenRepository.findById(userTokenId).orElse(null);
+
+        TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
+        if (tokenEntity != null && userTokenEntity != null) {
+            if (userTokenEntity.getIssuedAt().isAfter(tokenEntity.getIssuedAt()))
+                throw new PermissionDeniedException("You can't revoke sessions older than yours");
             tokenEntity.setRevoked(true);
         } else {
             throw new InvalidTokenException("Token not found");

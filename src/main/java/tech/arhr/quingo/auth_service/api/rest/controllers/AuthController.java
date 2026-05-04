@@ -24,6 +24,7 @@ import tech.arhr.quingo.auth_service.services.AuthService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -89,6 +90,27 @@ public class AuthController {
         String refreshToken = resolveRefreshToken(refreshTokenFromCookie, refreshTokenRequest, strategy);
         authService.logoutAll(refreshToken);
         return createLogoutResponse(strategy);
+    }
+
+    @DeleteMapping("/logout/{tokenId}")
+    public ResponseEntity<SuccessResponse<Void>> logoutToken(
+            @CookieValue(name = "refresh_token", required = false) String refreshTokenFromCookie,
+            @CookieValue(name = "access_token", required = false) String accessToken,
+            @RequestBody(required = false) RefreshTokenRequest refreshTokenRequest,
+            @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader,
+            @PathVariable UUID tokenId) {
+
+        AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
+        String refreshToken = resolveRefreshToken(refreshTokenFromCookie, refreshTokenRequest, strategy);
+        authService.logoutTokenById(refreshToken, tokenId);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
+                        timeProvider.now()
+                ));
     }
 
     @GetMapping("/sessions")
