@@ -193,7 +193,7 @@ class AuthServiceTest {
         request.setOldPassword("oldPass123");
         request.setNewPassword("newPass123");
 
-        authService.changePassword(userId, request);
+        authService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
 
         verify(userService).checkPasswordReturnUser(userId, "oldPass123");
         verify(userService).updateUserPassword(userId, "newPass123");

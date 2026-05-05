@@ -7,16 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
-import tech.arhr.quingo.auth_service.api.rest.models.SendResetPasswordRequest;
-import tech.arhr.quingo.auth_service.api.rest.models.ResetPasswordRequest;
-import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
+import tech.arhr.quingo.auth_service.api.rest.models.*;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.SecurityStatusDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
 import tech.arhr.quingo.auth_service.services.SecurityService;
 import tech.arhr.quingo.auth_service.services.UserService;
+import tech.arhr.quingo.auth_service.services.VerificationService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 
 @Slf4j
@@ -26,6 +24,7 @@ import tech.arhr.quingo.auth_service.utils.TimeProvider;
 public class UserController {
     private final AuthService authService;
     private final UserService userService;
+    private final VerificationService verificationService;
     private final TimeProvider timeProvider;
     private final SecurityService securityService;
 
@@ -42,12 +41,30 @@ public class UserController {
                 ));
     }
 
-    @PostMapping("/change-password")
+    @PostMapping("/password/change")
     public ResponseEntity<SuccessResponse<Void>> changePassword(
             @RequestBody @Valid ChangePasswordRequest request
     ) {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-        authService.changePassword(auth.getUser().getId(), request);
+        authService.changePassword(
+                auth.getUser().getId(),
+                request.getOldPassword(),
+                request.getNewPassword());
+
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
+                        timeProvider.now()
+                ));
+    }
+
+    @PostMapping("/password/set")
+    public ResponseEntity<SuccessResponse<Void>> setPassword(
+            @RequestBody @Valid SetPasswordRequest request
+    ) {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        authService.setPassword(auth.getUser().getId(), request.getPassword());
 
         return ResponseEntity.ok(
                 SuccessResponse.of(
@@ -97,5 +114,32 @@ public class UserController {
                         null,
                         timeProvider.now()
                 ));
+    }
+
+    @PatchMapping("/email/verify")
+    public ResponseEntity<SuccessResponse<Void>> verifyToken(
+            @Valid @RequestBody VerifyEmailRequest request
+    ) {
+        userService.verifyEmail(request.getVerificationToken());
+
+        return ResponseEntity
+                .ok()
+                .body(SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
+                        timeProvider.now()));
+    }
+
+    @PostMapping("/email/verify/resend")
+    public ResponseEntity<SuccessResponse<Void>> resendEmailVerification() {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        verificationService.sendVerificationEmail(auth.getUser());
+
+        return ResponseEntity
+                .ok()
+                .body(SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
+                        timeProvider.now()));
     }
 }

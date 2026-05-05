@@ -8,6 +8,7 @@ import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisMod
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.VerificationTokenDto;
 import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
+import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyVerifiedException;
 import tech.arhr.quingo.auth_service.exceptions.auth.TokenNotFoundException;
 import tech.arhr.quingo.auth_service.utils.VerificationTokenMapper;
 
@@ -34,6 +35,9 @@ public class VerificationService {
 
     @Transactional
     public void sendVerificationEmail(UserDto userDto) {
+        if (userDto.isEmailVerified())
+            throw new EmailAlreadyVerifiedException();
+
         VerificationTokenDto token = generateVerificationToken(userDto.getId(), VerificationTokenType.VERIFY_EMAIL);
         outboxService.sendVerifyEmailEvent(userDto, token.getToken());
     }
@@ -44,17 +48,13 @@ public class VerificationService {
         outboxService.sendResetPasswordEvent(email, token.getToken());
     }
 
-    public UUID getUserIdIfTokenExists(String token, VerificationTokenType type) {
+    public UUID validateTokenGetUserId(String token, VerificationTokenType type) {
         Optional<VerificationTokenRedisModel> opt = redisRepository.get(token, type);
+        redisRepository.delete(token, type);
         if (opt.isPresent()) {
             return opt.get().getUserId();
         } else {
             throw new TokenNotFoundException("Verification token not found");
         }
     }
-
-    public void deleteToken(String token, VerificationTokenType type){
-        redisRepository.delete(token, type);
-    }
-
 }

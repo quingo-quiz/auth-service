@@ -16,6 +16,7 @@ import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.services.mfa.MfaService;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
@@ -143,12 +144,18 @@ public class AuthService {
     }
 
     @Transactional
-    public void changePassword(UUID userId, ChangePasswordRequest request) {
-        String oldPassword = request.getOldPassword();
-        String newPassword = request.getNewPassword();
-
+    public void changePassword(UUID userId, String oldPassword, String newPassword) {
         userService.checkPasswordReturnUser(userId, oldPassword);
         userService.updateUserPassword(userId, newPassword);
+        tokenService.revokeAllUserTokens(userId);
+    }
+
+    @Transactional
+    public void setPassword(UUID userId, String password) {
+        if (userService.isPasswordSetForUser(userId)){
+            throw new PermissionDeniedException("Password has already been set");
+        }
+        userService.updateUserPassword(userId, password);
         tokenService.revokeAllUserTokens(userId);
     }
 
