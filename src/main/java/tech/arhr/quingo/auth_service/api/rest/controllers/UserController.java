@@ -5,10 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
+import tech.arhr.quingo.auth_service.api.rest.models.SendResetPasswordRequest;
+import tech.arhr.quingo.auth_service.api.rest.models.ResetPasswordRequest;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.SecurityStatusDto;
@@ -65,6 +66,35 @@ public class UserController {
                 SuccessResponse.of(
                         HttpStatus.OK,
                         status,
+                        timeProvider.now()
+                ));
+    }
+
+    @PostMapping("/password/send-reset")
+    public ResponseEntity<SuccessResponse<Void>> resetPassword(
+            @Valid @RequestBody SendResetPasswordRequest request
+    ) {
+        String email = request.getEmail();
+        userService.sendResetPassword(email);
+
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
+                        timeProvider.now()
+                ));
+    }
+
+    @PatchMapping("/password/reset")
+    public ResponseEntity<SuccessResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        userService.resetPassword(request.getResetToken(), request.getNewPassword());
+
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        null,
                         timeProvider.now()
                 ));
     }

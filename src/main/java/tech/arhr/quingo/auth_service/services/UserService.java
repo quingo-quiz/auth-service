@@ -22,6 +22,7 @@ import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.UserMapper;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -211,5 +212,21 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         userEntity.setEmailVerified(true);
         userRepository.save(userEntity);
+    }
+
+    @Transactional
+    public void sendResetPassword(String email){
+        Optional<UserEntity> opt = userRepository.findByEmail(email);
+        if (opt.isPresent()) {
+            verificationService.sendResetPasswordEmail(email, opt.get().getId());
+        }
+    }
+
+    @Transactional
+    public void resetPassword(String resetToken, String newPassword) {
+        UUID userId = verificationService.getUserIdIfTokenExists(resetToken, VerificationTokenType.RESET_PASSWORD);
+        verificationService.deleteToken(resetToken, VerificationTokenType.RESET_PASSWORD);
+        updateUserPassword(userId, newPassword);
+        tokenService.revokeAllUserTokens(userId);
     }
 }

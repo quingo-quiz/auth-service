@@ -36,7 +36,7 @@ public class VerificationController {
     @PostMapping("/email/resend")
     public ResponseEntity<SuccessResponse<Void>> resendEmailVerification(){
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-        verificationService.resendVerificationEmail(auth.getUser());
+        verificationService.sendVerificationEmail(auth.getUser());
 
         return ResponseEntity
                 .ok()

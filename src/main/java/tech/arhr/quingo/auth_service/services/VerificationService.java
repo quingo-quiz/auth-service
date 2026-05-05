@@ -39,9 +39,9 @@ public class VerificationService {
     }
 
     @Transactional
-    public void resendVerificationEmail(UserDto userDto) {
-        VerificationTokenDto token = generateVerificationToken(userDto.getId(), VerificationTokenType.VERIFY_EMAIL);
-        outboxService.sendVerifyEmailEvent(userDto, token.getToken());
+    public void sendResetPasswordEmail(String email, UUID userId) {
+        VerificationTokenDto token = generateVerificationToken(userId, VerificationTokenType.RESET_PASSWORD);
+        outboxService.sendResetPasswordEvent(email, token.getToken());
     }
 
     public UUID getUserIdIfTokenExists(String token, VerificationTokenType type) {
@@ -49,7 +49,7 @@ public class VerificationService {
         if (opt.isPresent()) {
             return opt.get().getUserId();
         } else {
-            throw new TokenNotFoundException();
+            throw new TokenNotFoundException("Verification token not found");
         }
     }
 
