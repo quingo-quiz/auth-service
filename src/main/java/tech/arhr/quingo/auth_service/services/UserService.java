@@ -205,6 +205,8 @@ public class UserService {
     @Transactional
     public void verifyEmail(String token) {
         UUID userId = verificationService.getUserIdIfTokenExists(token, VerificationTokenType.VERIFY_EMAIL);
+        verificationService.deleteToken(token, VerificationTokenType.VERIFY_EMAIL);
+
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         userEntity.setEmailVerified(true);

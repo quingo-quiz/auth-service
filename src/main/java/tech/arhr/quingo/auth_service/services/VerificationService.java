@@ -2,6 +2,7 @@ package tech.arhr.quingo.auth_service.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.redis.interfaces.RedisVerificationTokenRepository;
 import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisModel;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -31,12 +32,14 @@ public class VerificationService {
         return token;
     }
 
+    @Transactional
     public void sendVerificationEmail(UserDto userDto) {
         VerificationTokenDto token = generateVerificationToken(userDto.getId(), VerificationTokenType.VERIFY_EMAIL);
         outboxService.sendVerifyEmailEvent(userDto, token.getToken());
     }
 
-    public void sendResetPasswordEmail(UserDto userDto) {
+    @Transactional
+    public void resendVerificationEmail(UserDto userDto) {
         VerificationTokenDto token = generateVerificationToken(userDto.getId(), VerificationTokenType.VERIFY_EMAIL);
         outboxService.sendVerifyEmailEvent(userDto, token.getToken());
     }
@@ -48,6 +51,10 @@ public class VerificationService {
         } else {
             throw new TokenNotFoundException();
         }
+    }
+
+    public void deleteToken(String token, VerificationTokenType type){
+        redisRepository.delete(token, type);
     }
 
 }

@@ -3,6 +3,7 @@ package tech.arhr.quingo.auth_service.configuration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -61,6 +62,8 @@ public class SecurityConfiguration {
                                         "/oauth2/authorization/**",
                                         "/mfa/otp/verify"
                                 ).permitAll()
+                                .requestMatchers(HttpMethod.PATCH,
+                                        "/verification/email/**").permitAll()
 
                                 .anyRequest().authenticated()
                         //.anyRequest().permitAll()
