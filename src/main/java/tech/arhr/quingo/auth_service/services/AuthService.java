@@ -5,8 +5,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
-import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
+import tech.arhr.quingo.auth_service.api.rest.models.SessionModel;
 import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.SocialAccountDto;
@@ -136,7 +135,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public List<TokenModel> getActiveRefreshTokens(UUID userId) {
+    public List<SessionModel> getActiveRefreshTokens(UUID userId) {
         return tokenService.getActiveRefreshTokens(userId)
                 .stream()
                 .map(tokenMapper::toApiModel)

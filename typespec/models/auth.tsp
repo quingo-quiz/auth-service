@@ -53,11 +53,26 @@ model OtpConnectDto {
   secretUri: string;
 }
 
-@doc("Информация о токене")
-model TokenModel {
+@doc("Информация о сессии")
+model SessionModel {
   @doc("ID токена")
   tokenId: uuid;
 
   @doc("Время выдачи")
   issuedAt: utcDateTime;
+
+  @doc("Время истечения срока действия")
+  expiresAt: utcDateTime;
+
+  @doc("Браузер")
+  browser?: string;
+
+  @doc("Операционная система")
+  os?: string;
+
+  @doc("Устройство")
+  device?: string;
+
+  @doc("IP адрес")
+  ipAddress?: string;
 }

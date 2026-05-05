@@ -66,6 +66,40 @@ model SecurityStatusDto {
   accountStatus: AccountStatus;
 }
 
+@doc("Запрос на установку пароля")
+model SetPasswordRequest {
+  @doc("Новый пароль")
+  @minLength(6)
+  @maxLength(50)
+  password: string;
+}
+
+@doc("Запрос на сброс пароля")
+model ResetPasswordRequest {
+  @doc("Токен сброса пароля")
+  resetToken: string;
+
+  @doc("Новый пароль")
+  @minLength(6)
+  @maxLength(50)
+  newPassword: string;
+}
+
+@doc("Запрос на отправку письма для сброса пароля")
+model SendResetPasswordRequest {
+  @doc("Email пользователя")
+  @format("email")
+  @minLength(3)
+  @maxLength(100)
+  email: string;
+}
+
+@doc("Запрос на подтверждение email")
+model VerifyEmailRequest {
+  @doc("Токен подтверждения email")
+  verificationToken: string;
+}
+
 enum MfaType {
   OTP
 }

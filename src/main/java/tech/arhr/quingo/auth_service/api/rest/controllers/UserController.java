@@ -102,7 +102,7 @@ public class UserController {
                 ));
     }
 
-    @PatchMapping("/password/reset")
+    @PostMapping("/password/reset")
     public ResponseEntity<SuccessResponse<Void>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request
     ) {
