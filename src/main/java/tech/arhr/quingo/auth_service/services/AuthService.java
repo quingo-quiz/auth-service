@@ -68,7 +68,7 @@ public class AuthService {
             throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
         }
 
-        if (user.isMfaEnabled()) {
+        if (mfaService.isMfaEnabledForUser(user.getId())) {
             return AuthResponse.builder()
                     .mfaTempToken(tokenService.createMfaTempToken(user))
                     .mfaRequired(true)
@@ -84,7 +84,7 @@ public class AuthService {
     @Transactional
     public AuthResponse verifyOtpIssueTokens(OtpVerifyRequest request) {
         UUID userId = tokenService.validateMfaTempToken(request.getMfaTempToken());
-        mfaService.verifyOtpCode(userId, request);
+        mfaService.verifyOtpCode(userId, request.getCode());
 
         UserDto user = userService.getUserById(userId);
 
@@ -103,11 +103,6 @@ public class AuthService {
                 .accessToken(tokenService.createAccessToken(user))
                 .refreshToken(tokenService.createRefreshToken(user))
                 .build();
-    }
-
-    @Transactional
-    public void logout(String refreshToken) {
-        tokenService.revokeRefreshToken(refreshToken);
     }
 
     @Transactional

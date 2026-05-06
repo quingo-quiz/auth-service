@@ -23,7 +23,7 @@ public class SecurityService {
         status.setEmail(user.getEmail());
         status.setEmailVerified(user.isEmailVerified());
         status.setPasswordSet(userService.isPasswordSetForUser(userId));
-        status.setMfaEnabled(user.isMfaEnabled());
+        status.setMfaEnabled(mfaService.isMfaEnabledForUser(userId));
         status.setRoles(user.getRoles());
         status.setAccountStatus(user.getAccountStatus());
         status.setMfaTypes(mfaService.getUserMfaTypes(userId));

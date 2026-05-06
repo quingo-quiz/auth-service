@@ -130,7 +130,7 @@ class MfaServiceTest {
                 .secretKey("encrypted")
                 .methodEnabled(false)
                 .build();
-        UserDto userDto = UserDto.builder().id(userId).mfaEnabled(false).build();
+        UserDto userDto = UserDto.builder().id(userId).build();
 
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
         when(otpService.verifyCode("encrypted", "654321")).thenReturn(true);
@@ -139,7 +139,6 @@ class MfaServiceTest {
 
         assertThat(settings.isMethodEnabled()).isTrue();
         verify(mfaSettingsRepository).save(settings);
-        verify(userService).setMfaEnabledForUser(userId);
     }
 
     @Test
@@ -157,7 +156,7 @@ class MfaServiceTest {
 
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
 
-        assertThatThrownBy(() -> mfaService.verifyOtpCode(userId, request))
+        assertThatThrownBy(() -> mfaService.verifyOtpCode(userId, request.getCode()))
                 .isInstanceOf(MfaSettingsInvalidException.class)
                 .hasMessageContaining("not enabled");
     }
@@ -178,7 +177,7 @@ class MfaServiceTest {
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
         when(otpService.verifyCode("encrypted", "123456")).thenReturn(true);
 
-        mfaService.verifyOtpCode(userId, request);
+        mfaService.verifyOtpCode(userId, request.getCode());
 
         verify(otpService).verifyCode("encrypted", "123456");
     }

@@ -127,12 +127,12 @@ class AuthServiceTest {
         UserDto user = UserDto.builder()
             .id(UUID.randomUUID())
             .accountStatus(AccountStatus.ACTIVE)
-            .mfaEnabled(true)
             .build();
         TokenDto mfaToken = TokenDto.builder().id(UUID.randomUUID()).token("mfa-token").build();
 
         when(userService.checkPasswordReturnUser(request.getEmail(), request.getPassword())).thenReturn(user);
         when(tokenService.createMfaTempToken(user)).thenReturn(mfaToken);
+        when(mfaService.isMfaEnabledForUser(user.getId())).thenReturn(true);
 
         AuthResponse result = authService.authenticate(request);
 
@@ -153,7 +153,6 @@ class AuthServiceTest {
         UserDto user = UserDto.builder()
             .id(UUID.randomUUID())
             .accountStatus(AccountStatus.BLOCKED)
-            .mfaEnabled(false)
             .build();
 
         when(userService.checkPasswordReturnUser(request.getEmail(), request.getPassword())).thenReturn(user);
@@ -183,7 +182,7 @@ class AuthServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo(access);
         assertThat(response.getRefreshToken()).isEqualTo(refresh);
-        verify(mfaService).verifyOtpCode(userId, request);
+        verify(mfaService).verifyOtpCode(userId, request.getCode());
         }
 
         @Test

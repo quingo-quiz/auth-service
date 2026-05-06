@@ -13,4 +13,6 @@ public interface JpaMfaSettingsRepository extends JpaRepository<UserMfaSettingsE
     void deleteByUserIdEqualsAndType(UUID userId, MfaType type);
 
     List<UserMfaSettingsEntity> findByUserId(UUID userId);
+
+    List<UserMfaSettingsEntity> findByUserIdAndMethodEnabled(UUID userId, boolean methodEnabled);
 }
