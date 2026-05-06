@@ -98,7 +98,7 @@ public class MfaService {
             throw new MfaSettingsInvalidException("2FA OTP method is not enabled");
         }
 
-        if (!otpService.verifyCode(encryptedSecretg, code)) {
+        if (!otpService.verifyCode(encryptedSecret, code)) {
             throw new MfaFailedException("2FA code verification failed");
         }
     }
