@@ -15,6 +15,7 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.JwtProvider;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
@@ -27,7 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TokenServiceTest {
+class SessionServiceTest {
 
     @Mock
     private JpaTokenRepository jpaTokenRepository;
@@ -47,18 +48,21 @@ class TokenServiceTest {
     @Mock
     private WhiteListTokenService whiteListTokenService;
 
+    @Mock
+    private JwtProvider jwtProvider;
+
     @InjectMocks
-    private TokenService tokenService;
+    private SessionService sessionService;
 
     private UserDto defaultUser;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(tokenService, "JWT_SECRET", "test-secret-key");
-        ReflectionTestUtils.setField(tokenService, "ISSUER", "test-issuer");
-        ReflectionTestUtils.setField(tokenService, "ACCESS_EXPIRATION_MINUTES", 15);
-        ReflectionTestUtils.setField(tokenService, "REFRESH_EXPIRATION_DAYS", 7);
-        tokenService.init();
+        ReflectionTestUtils.setField(sessionService, "JWT_SECRET", "test-secret-key");
+        ReflectionTestUtils.setField(sessionService, "ISSUER", "test-issuer");
+        ReflectionTestUtils.setField(sessionService, "ACCESS_EXPIRATION_MINUTES", 15);
+        ReflectionTestUtils.setField(sessionService, "REFRESH_EXPIRATION_DAYS", 7);
+        sessionService.init();
 
         defaultUser = UserDto.builder()
                 .id(UUID.randomUUID())
@@ -78,7 +82,7 @@ class TokenServiceTest {
                 .roles(null)
                 .build();
 
-        assertThatThrownBy(() -> tokenService.createAccessToken(user))
+        assertThatThrownBy(() -> sessionService.createAccessToken(user))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
@@ -89,14 +93,14 @@ class TokenServiceTest {
                 .roles(List.of())
                 .build();
 
-        assertThatThrownBy(() -> tokenService.createAccessToken(user))
+        assertThatThrownBy(() -> sessionService.createAccessToken(user))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void createAccessToken_ValidUser_TokenContainsCorrectClaims() {
-        TokenDto result = tokenService.createAccessToken(defaultUser);
-        DecodedJWT decoded = tokenService.decodeToken(result.getToken());
+        TokenDto result = sessionService.createAccessToken(defaultUser);
+        DecodedJWT decoded = sessionService.decodeToken(result.getToken());
 
         assertThat(decoded.getSubject()).isEqualTo(defaultUser.getId().toString());
         assertThat(decoded.getClaim("typ").asString()).isEqualTo("access");
@@ -107,7 +111,7 @@ class TokenServiceTest {
 
     @Test
     void createAccessToken_ValidUser_RegistersTokenInWhiteList() {
-        tokenService.createAccessToken(defaultUser);
+        sessionService.createAccessToken(defaultUser);
 
         verify(whiteListTokenService).registerToken(any(TokenDto.class));
     }
@@ -119,8 +123,8 @@ class TokenServiceTest {
         when(tokenMapper.toEntity(any(TokenDto.class))).thenReturn(entity);
         when(hasher.hash(any())).thenReturn("hashed_token");
 
-        TokenDto result = tokenService.createRefreshToken(defaultUser);
-        DecodedJWT decoded = tokenService.decodeToken(result.getToken());
+        TokenDto result = sessionService.createRefreshToken(defaultUser);
+        DecodedJWT decoded = sessionService.decodeToken(result.getToken());
 
         verify(jpaTokenRepository).save(entity);
         assertThat(entity.getToken()).isEqualTo("hashed_token");
@@ -130,41 +134,41 @@ class TokenServiceTest {
 
     @Test
     void validateAccessToken_ValidAccessToken_NoException() {
-        String token = tokenService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createAccessToken(defaultUser).getToken();
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
 
-        assertThatNoException().isThrownBy(() -> tokenService.validateAccessToken(token));
+        assertThatNoException().isThrownBy(() -> sessionService.validateAccessToken(token));
     }
 
     @Test
     void validateAccessToken_BlockedToken_ThrowsInvalidTokenException() {
-        String token = tokenService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createAccessToken(defaultUser).getToken();
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(true);
 
-        assertThatThrownBy(() -> tokenService.validateAccessToken(token))
+        assertThatThrownBy(() -> sessionService.validateAccessToken(token))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void validateAccessToken_TokenInvalid_ThrowsInvalidTokenException() {
-        assertThatThrownBy(() -> tokenService.validateAccessToken("refreshToken"))
+        assertThatThrownBy(() -> sessionService.validateAccessToken("refreshToken"))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
 
     @Test
     void validateRefreshToken_AccessTokenProvided_ThrowsInvalidTokenException() {
-        String accessToken = tokenService.createAccessToken(defaultUser).getToken();
+        String accessToken = sessionService.createAccessToken(defaultUser).getToken();
 
-        assertThatThrownBy(() -> tokenService.validateRefreshToken(accessToken))
+        assertThatThrownBy(() -> sessionService.validateRefreshToken(accessToken))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void getUserFromTokenNoQuery_ValidAccessToken_ReturnsCorrectUserDto() {
-        String token = tokenService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createAccessToken(defaultUser).getToken();
 
-        UserDto result = tokenService.getUserFromTokenNoQuery(token);
+        UserDto result = sessionService.getUserFromTokenNoQuery(token);
 
         assertThat(result.getId()).isEqualTo(defaultUser.getId());
         assertThat(result.getUsername()).isEqualTo(defaultUser.getUsername());
@@ -174,13 +178,13 @@ class TokenServiceTest {
 
     @Test
     void decodeToken_MalformedToken_ThrowsInvalidTokenException() {
-        assertThatThrownBy(() -> tokenService.decodeToken("not.a.valid.token"))
+        assertThatThrownBy(() -> sessionService.decodeToken("not.a.valid.token"))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
-        TokenService otherService = new TokenService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider);
+        SessionService otherService = new SessionService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider);
         ReflectionTestUtils.setField(otherService, "JWT_SECRET", "other-secret");
         ReflectionTestUtils.setField(otherService, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherService, "ACCESS_EXPIRATION_MINUTES", 15);
@@ -189,34 +193,16 @@ class TokenServiceTest {
 
         String tokenFromOtherService = otherService.createAccessToken(defaultUser).getToken();
 
-        assertThatThrownBy(() -> tokenService.decodeToken(tokenFromOtherService))
+        assertThatThrownBy(() -> sessionService.decodeToken(tokenFromOtherService))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
-    void validateMfaTempToken_TokkenValid_ReturnsUserId() {
-        TokenDto token = tokenService.createMfaTempToken(defaultUser);
-
-        UUID userId = tokenService.validateMfaTempToken(token.getToken());
-
-        assertThat(userId).isEqualTo(defaultUser.getId());
-    }
-
-    @Test
-    void validateMfaTempToken_WithAccessToken_ThrowsInvalidTokenException() {
-        String accessToken = tokenService.createAccessToken(defaultUser).getToken();
-
-        assertThatThrownBy(() -> tokenService.validateMfaTempToken(accessToken))
-                .isInstanceOf(InvalidTokenException.class)
-                .hasMessageContaining("Invalid token type");
-    }
-
-    @Test
     void blockAccessToken_ValidToken_DelegatesToWhiteListBlock() {
-        TokenDto access = tokenService.createAccessToken(defaultUser);
+        TokenDto access = sessionService.createAccessToken(defaultUser);
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
 
-        tokenService.blockAccessToken(access.getToken());
+        sessionService.blockAccessToken(access.getToken());
 
         verify(whiteListTokenService).blockToken(access.getId());
     }
@@ -229,7 +215,7 @@ class TokenServiceTest {
 
         when(jpaTokenRepository.findAllByUserId(userId)).thenReturn(List.of(first, second));
 
-        tokenService.revokeAllUserTokens(userId);
+        sessionService.revokeAllUserTokens(userId);
 
         assertThat(first.isRevoked()).isTrue();
         assertThat(second.isRevoked()).isTrue();
