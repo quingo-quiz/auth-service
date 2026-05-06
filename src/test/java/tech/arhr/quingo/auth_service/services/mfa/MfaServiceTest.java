@@ -130,7 +130,7 @@ class MfaServiceTest {
                 .secretKey("encrypted")
                 .methodEnabled(false)
                 .build();
-        UserDto userDto = UserDto.builder().id(userId).mfaEnabled(false).build();
+        UserDto userDto = UserDto.builder().id(userId).build();
 
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
         when(otpService.verifyCode("encrypted", "654321")).thenReturn(true);
