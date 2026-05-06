@@ -11,4 +11,6 @@ public interface UserMapper {
 
     @Mapping(target = "hashedPassword", ignore = true)
     UserEntity toEntity(UserDto dto);
+
+
 }

@@ -45,7 +45,9 @@ public class UserService {
             VerificationService verificationService,
             JpaUserRepository userRepository,
             UserMapper userMapper,
-            Hasher hasher, CacheManager cacheManager, ApplicationEventPublisher publisher) {
+            Hasher hasher,
+            CacheManager cacheManager,
+            ApplicationEventPublisher publisher) {
         this.verificationService = verificationService;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
