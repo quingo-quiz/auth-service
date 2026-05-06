@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Data
-public class TokenModel {
+public class SessionModel {
     private UUID tokenId;
     private Instant issuedAt;
     private Instant expiresAt;

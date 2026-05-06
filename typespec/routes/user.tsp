@@ -25,7 +25,7 @@ interface UserRoutes {
   @tag("User")
   @summary("Смена пароля")
   @post
-  @route("/change-password")
+  @route("/password/change")
   changePassword(
     @body request: ChangePasswordRequest,
   ): {
@@ -34,6 +34,79 @@ interface UserRoutes {
   } |
   {
     @statusCode statusCode: 400 | 401 | 403;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
+  @summary("Установка пароля (если ещё не установлен)")
+  @post
+  @route("/password/set")
+  setPassword(
+    @body request: SetPasswordRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
+  @summary("Отправка письма для сброса пароля")
+  @post
+  @route("/password/send-reset")
+  sendResetPassword(
+    @body request: SendResetPasswordRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
+  @summary("Сброс пароля")
+  @patch
+  @route("/password/reset")
+  resetPassword(
+    @body request: ResetPasswordRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
+  @summary("Подтверждение email")
+  @patch
+  @route("/email/verify")
+  verifyEmail(
+    @body request: VerifyEmailRequest,
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
+  @summary("Повторная отправка письма подтверждения email")
+  @post
+  @route("/email/verify/resend")
+  resendEmailVerification(): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<null>;
+  } |
+  {
+    @statusCode statusCode: 400 | 401 | 409;
     @body body: ErrorResponse;
   };
 

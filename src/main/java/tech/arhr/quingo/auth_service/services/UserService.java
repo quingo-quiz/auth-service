@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.services;
 
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -12,6 +13,7 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
+import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
@@ -21,24 +23,29 @@ import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.UserMapper;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class UserService {
     private final TokenService tokenService;
+    private final VerificationService verificationService;
     private final JpaUserRepository userRepository;
     private final UserMapper userMapper;
     private final Hasher hasher;
+    private final CacheManager cacheManager;
 
     public UserService(
-            @Lazy TokenService tokenService,
+            @Lazy TokenService tokenService, VerificationService verificationService,
             JpaUserRepository userRepository,
             UserMapper userMapper,
-            Hasher hasher) {
+            Hasher hasher, CacheManager cacheManager) {
         this.tokenService = tokenService;
+        this.verificationService = verificationService;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.hasher = hasher;
+        this.cacheManager = cacheManager;
     }
 
 
@@ -61,6 +68,11 @@ public class UserService {
     public UserDto checkPasswordReturnUser(UUID userId, String password) {
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid userId or password"));
+
+
+        if (userEntity.getHashedPassword() == null) {
+            throw new PasswordNotSetException();
+        }
 
         if (!hasher.verify(password, userEntity.getHashedPassword())) {
             throw new InvalidCredentialsException("Invalid userId or password");
@@ -119,8 +131,7 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void updateUserPassword(UUID userId, String password) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        UserEntity entity = findByIdOrThrow(userId);
         entity.setHashedPassword(hasher.hash(password));
         userRepository.save(entity);
     }
@@ -128,8 +139,7 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void clearUserPassword(UUID userId) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        UserEntity entity = findByIdOrThrow(userId);
         entity.setHashedPassword(null);
         userRepository.save(entity);
     }
@@ -137,8 +147,7 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void blockUser(UUID userId) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        UserEntity entity = findByIdOrThrow(userId);
 
         entity.setAccountStatus(AccountStatus.BLOCKED);
         userRepository.save(entity);
@@ -148,8 +157,7 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void unblockUser(UUID userId) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        UserEntity entity = findByIdOrThrow(userId);
 
         entity.setAccountStatus(AccountStatus.ACTIVE);
         userRepository.save(entity);
@@ -158,8 +166,7 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void changeUserRoles(UUID userId, List<UserRole> userRoles) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with id " + userId + " not found"));
+        UserEntity entity = findByIdOrThrow(userId);
 
         entity.setRoles(userRoles);
         userRepository.save(entity);
@@ -169,33 +176,72 @@ public class UserService {
     @Transactional
     @CacheEvict(value = "users:cached", key = "#userId")
     public void setMfaEnabledForUser(UUID userId) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserEntity entity = findByIdOrThrow(userId);
         entity.setMfaEnabled(true);
         userRepository.save(entity);
     }
 
     @Transactional(readOnly = true)
     public boolean isPasswordSetForUser(UUID userId) {
-        UserEntity entity = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserEntity entity = findByIdOrThrow(userId);
         return entity.getHashedPassword() != null;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "users:cached", key = "#id")
     public UserDto getUserById(UUID id) {
-        UserEntity userEntity = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserEntity userEntity = findByIdOrThrow(id);
 
         return userMapper.toDto(userEntity);
     }
 
-    @Cacheable(value = "users:cached", key = "#email")
+    @Transactional(readOnly = true)
     public UserDto getUserByEmail(String email) {
-        UserEntity userEntity = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserEntity userEntity = findByEmailOrThrow(email);
 
         return userMapper.toDto(userEntity);
+    }
+
+    @Transactional
+    public void verifyEmail(String token) {
+        UUID userId = verificationService.validateTokenGetUserId(token, VerificationTokenType.VERIFY_EMAIL);
+
+        UserEntity userEntity = findByIdOrThrow(userId);
+        userEntity.setEmailVerified(true);
+        evictUserCache(userId);
+        userRepository.save(userEntity);
+    }
+
+    @Transactional
+    public void sendResetPassword(String email){
+        Optional<UserEntity> opt = userRepository.findByEmail(email);
+        if (opt.isPresent()) {
+            verificationService.sendResetPasswordEmail(email, opt.get().getId());
+        }
+    }
+
+    @Transactional
+    public void resetPassword(String resetToken, String newPassword) {
+        UUID userId = verificationService.validateTokenGetUserId(resetToken, VerificationTokenType.RESET_PASSWORD);
+        updateUserPassword(userId, newPassword);
+        evictUserCache(userId);
+        tokenService.revokeAllUserTokens(userId);
+    }
+
+    private UserEntity findByIdOrThrow(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+    }
+
+    private UserEntity findByEmailOrThrow(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
+    }
+
+    private void evictUserCache(UUID userId) {
+        var cache = cacheManager.getCache("users:cached");
+        if (cache != null) {
+            cache.evict(userId);
+        }
     }
 }

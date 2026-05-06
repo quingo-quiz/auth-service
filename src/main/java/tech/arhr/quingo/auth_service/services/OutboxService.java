@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.kafka.events.BaseKafkaEvent;
+import tech.arhr.quingo.auth_service.data.kafka.events.payload.ResetPasswordPayload;
 import tech.arhr.quingo.auth_service.data.kafka.events.payload.VerifyEmailPayload;
 import tech.arhr.quingo.auth_service.data.sql.JpaOutboxRepository;
 import tech.arhr.quingo.auth_service.data.sql.entity.OutboxEventEntity;
@@ -31,6 +32,11 @@ public class OutboxService {
         saveEvent(payloadData, EventType.VERIFY_EMAIL);
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void sendResetPasswordEvent(String email, String verificationToken) {
+        ResetPasswordPayload payloadData = new ResetPasswordPayload(email, verificationToken);
+        saveEvent(payloadData, EventType.RESET_PASSWORD);
+    }
 
     private <T> void saveEvent(T data, EventType type) {
         Instant now = timeProvider.now();

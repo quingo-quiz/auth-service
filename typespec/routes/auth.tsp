@@ -124,7 +124,7 @@ interface AuthRoutes {
   @route("/sessions")
   getSessions(): {
     @statusCode statusCode: 200;
-    @body body: SuccessResponse<TokenModel[]>;
+    @body body: SuccessResponse<SessionModel[]>;
   } |
   {
     @statusCode statusCode: 400 | 401;

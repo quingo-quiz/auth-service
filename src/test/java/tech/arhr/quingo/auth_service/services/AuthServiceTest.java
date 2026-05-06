@@ -193,7 +193,7 @@ class AuthServiceTest {
         request.setOldPassword("oldPass123");
         request.setNewPassword("newPass123");
 
-        authService.changePassword(userId, request);
+        authService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
 
         verify(userService).checkPasswordReturnUser(userId, "oldPass123");
         verify(userService).updateUserPassword(userId, "newPass123");
@@ -300,5 +300,18 @@ class AuthServiceTest {
             .hasMessageContaining("unverified provider account email");
 
         verify(socialAccountService, never()).linkSocialAccount(any(), any());
-        }
+    }
+
+    @Test
+    void setPassword_Valid_UpdatesPasswordAndRevokesSessions() {
+        UUID userId = UUID.randomUUID();
+        String password = "newPassword";
+
+        when(userService.isPasswordSetForUser(userId)).thenReturn(false);
+
+        authService.setPassword(userId, password);
+
+        verify(userService).updateUserPassword(userId, password);
+        verify(tokenService).revokeAllUserTokens(userId);
+    }
 }

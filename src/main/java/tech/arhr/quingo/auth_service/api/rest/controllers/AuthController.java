@@ -10,8 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.AuthResponseModel;
 import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenRequest;
+import tech.arhr.quingo.auth_service.api.rest.models.SessionModel;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
-import tech.arhr.quingo.auth_service.api.rest.models.TokenModel;
 import tech.arhr.quingo.auth_service.api.rest.utils.AuthStrategy;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
@@ -114,10 +114,10 @@ public class AuthController {
     }
 
     @GetMapping("/sessions")
-    public ResponseEntity<SuccessResponse<List<TokenModel>>> getSessions() {
+    public ResponseEntity<SuccessResponse<List<SessionModel>>> getSessions() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
-        List<TokenModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
+        List<SessionModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,
