@@ -9,9 +9,29 @@ namespace AuthService;
 @route("/user")
 interface UserRoutes {
   @tag("User")
+  @summary("Update user info")
+  @patch
+  @route("/me")
+  updateUserInfo(
+    @body request: UpdateUserRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SuccessResponse<User>;
+  } | {
+    @statusCode statusCode: 400;
+    @body body: ErrorResponse;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: ErrorResponse;
+  } | {
+    @statusCode statusCode: 409;
+    @body body: ErrorResponse;
+  };
+
+  @tag("User")
   @summary("Информация о пользователе")
   @get
-  @route("/info")
+  @route("/me")
   info(
   ): {
     @statusCode statusCode: 200;
@@ -69,7 +89,7 @@ interface UserRoutes {
 
   @tag("User")
   @summary("Сброс пароля")
-  @patch
+  @post
   @route("/password/reset")
   resetPassword(
     @body request: ResetPasswordRequest,
