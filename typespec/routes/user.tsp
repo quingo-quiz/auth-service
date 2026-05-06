@@ -9,7 +9,7 @@ namespace AuthService;
 @route("/user")
 interface UserRoutes {
   @tag("User")
-  @summary("Update user info")
+  @summary("Обновить информацию о пользователе")
   @patch
   @route("/me")
   updateUserInfo(

@@ -139,7 +139,6 @@ class MfaServiceTest {
 
         assertThat(settings.isMethodEnabled()).isTrue();
         verify(mfaSettingsRepository).save(settings);
-        verify(userService).setMfaEnabledForUser(userId);
     }
 
     @Test

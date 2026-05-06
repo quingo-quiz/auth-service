@@ -22,6 +22,5 @@ public class UserDto {
     private String bio;
     private List<UserRole> roles;
     private boolean emailVerified;
-    private boolean mfaEnabled;
     private AccountStatus accountStatus;
 }

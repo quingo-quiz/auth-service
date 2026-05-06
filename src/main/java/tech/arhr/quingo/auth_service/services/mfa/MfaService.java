@@ -61,7 +61,6 @@ public class MfaService {
 
         var entity = entities.getFirst();
         mfaSettingsRepository.delete(entity);
-        userService.setMfaDisabledForUser(userId);
     }
 
     @Transactional
@@ -83,7 +82,6 @@ public class MfaService {
 
         entity.setMethodEnabled(true);
         mfaSettingsRepository.save(entity);
-        userService.setMfaEnabledForUser(user.getId());
     }
 
     @Transactional(readOnly = true)
@@ -110,5 +108,12 @@ public class MfaService {
                 .filter(UserMfaSettingsEntity::isMethodEnabled)
                 .map(UserMfaSettingsEntity::getType)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isMfaEnabledForUser(UUID userId) {
+        return !mfaSettingsRepository
+                .findByUserIdAndMethodEnabled(userId, true)
+                .isEmpty();
     }
 }
