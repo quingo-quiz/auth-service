@@ -59,6 +59,7 @@ public class MfaService {
 
         List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP);
 
+        if (entities.isEmpty()) throw new MfaSettingsInvalidException("No otp settings found");
         var entity = entities.getFirst();
         mfaSettingsRepository.delete(entity);
     }
@@ -91,13 +92,13 @@ public class MfaService {
             throw new MfaSettingsInvalidException("2FA settings for OTP method not found");
         }
         UserMfaSettingsEntity entity = entities.getFirst();
-        String encriptedSecret = entity.getSecretKey();
+        String encryptedSecret = entity.getSecretKey();
 
         if (!entity.isMethodEnabled()) {
             throw new MfaSettingsInvalidException("2FA OTP method is not enabled");
         }
 
-        if (!otpService.verifyCode(encriptedSecret, code)) {
+        if (!otpService.verifyCode(encryptedSecretg, code)) {
             throw new MfaFailedException("2FA code verification failed");
         }
     }

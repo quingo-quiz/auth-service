@@ -26,8 +26,12 @@ interface MfaRoutes {
     @route("/otp/disable")
     otpDisable(
          @body request: OtpDisableRequest,
-    ): {
-      @statusCode statusCode: 401;
+    ):{
+          @statusCode statusCode: 200;
+          @body body: SuccessResponse<null>;
+    } |
+    {
+      @statusCode statusCode: 401 | 400;
       @body body: ErrorResponse;
     };
 
