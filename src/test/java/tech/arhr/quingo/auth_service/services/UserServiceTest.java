@@ -328,7 +328,6 @@ class UserServiceTest {
 
         assertThat(entity.getRoles()).containsExactly(UserRole.ADMIN, UserRole.USER);
         verify(jpaUserRepository).save(entity);
-        verify(tokenService).refreshSessions(userId);
     }
 
     @Test

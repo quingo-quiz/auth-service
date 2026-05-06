@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,8 @@ import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
+import tech.arhr.quingo.auth_service.events.AllUserSessionsInvalidatedEvent;
+import tech.arhr.quingo.auth_service.events.user.UserRolesChangedEvent;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
@@ -291,16 +294,22 @@ public class TokenService {
         whiteListTokenService.blockAllUserTokens(userId);
     }
 
-    public void refreshSessions(UUID userId) {
-        whiteListTokenService.blockAllUserTokens(userId);
-    }
-
     @Transactional(readOnly = true)
     public List<TokenDto> getActiveRefreshTokens(UUID userId) {
         return tokenRepository.findAllByUserIdAndRevokedAndExpiresAtAfter(userId, false, timeProvider.now())
                 .stream()
                 .map(tokenMapper::toDto)
                 .toList();
+    }
+
+    @EventListener(AllUserSessionsInvalidatedEvent.class)
+    public void onInvalidateAllUserSessions(AllUserSessionsInvalidatedEvent event) {
+        revokeAllUserTokens(event.userId());
+    }
+
+    @EventListener(UserRolesChangedEvent.class)
+    public void onRevokeAllUserAccessTokens(UserRolesChangedEvent event) {
+        whiteListTokenService.blockAllUserTokens(event.userId());
     }
 
     private UserAgentInfoDto getClientInfoFromContext() {

@@ -120,7 +120,7 @@ public class UserController {
     public ResponseEntity<SuccessResponse<Void>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request
     ) {
-        userService.resetPassword(request.getResetToken(), request.getNewPassword());
+        verificationService.verifyResetPassword(request.getResetToken(), request.getNewPassword());
 
         return ResponseEntity.ok(
                 SuccessResponse.of(
@@ -134,7 +134,7 @@ public class UserController {
     public ResponseEntity<SuccessResponse<Void>> verifyToken(
             @Valid @RequestBody VerifyEmailRequest request
     ) {
-        userService.verifyEmail(request.getVerificationToken());
+        verificationService.verifyEmailVerification(request.getVerificationToken());
 
         return ResponseEntity
                 .ok()
