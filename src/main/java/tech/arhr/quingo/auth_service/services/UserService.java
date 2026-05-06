@@ -56,39 +56,6 @@ public class UserService {
         this.publisher = publisher;
     }
 
-
-    @Transactional(readOnly = true)
-    public UserDto checkPasswordReturnUser(String email, String password) {
-        UserEntity userEntity = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
-
-        if (userEntity.getHashedPassword() == null) {
-            throw new PasswordNotSetException();
-        }
-        if (!hasher.verify(password, userEntity.getHashedPassword())) {
-            throw new InvalidCredentialsException("Invalid email or password");
-        }
-
-        return userMapper.toDto(userEntity);
-    }
-
-    @Transactional(readOnly = true)
-    public UserDto checkPasswordReturnUser(UUID userId, String password) {
-        UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid userId or password"));
-
-
-        if (userEntity.getHashedPassword() == null) {
-            throw new PasswordNotSetException();
-        }
-
-        if (!hasher.verify(password, userEntity.getHashedPassword())) {
-            throw new InvalidCredentialsException("Invalid userId or password");
-        }
-
-        return userMapper.toDto(userEntity);
-    }
-
     @Transactional
     public UserDto createUser(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -243,6 +210,7 @@ public class UserService {
     }
 
     @EventListener(UserPasswordResetEvent.class)
+    @Transactional
     public void onUserPasswordReset(UserPasswordResetEvent event) {
         UUID userId = event.userId();
         updateUserPassword(userId, event.newPassword());

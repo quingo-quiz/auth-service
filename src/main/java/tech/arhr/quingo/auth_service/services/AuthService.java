@@ -15,9 +15,12 @@ import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
+import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.services.mfa.MfaService;
+import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.List;
@@ -32,6 +35,7 @@ public class AuthService {
     private final MfaService mfaService;
     private final TokenMapper tokenMapper;
     private final SocialAccountService socialAccountService;
+    private final Hasher hasher;
 
     public AuthService(
             TokenService tokenService,
@@ -39,7 +43,7 @@ public class AuthService {
             UserService userService,
             VerificationService verificationService,
             SocialAccountService socialAccountService,
-            MfaService mfaService
+            MfaService mfaService, Hasher hasher
     ) {
         this.tokenService = tokenService;
         this.userService = userService;
@@ -47,6 +51,7 @@ public class AuthService {
         this.verificationService = verificationService;
         this.mfaService = mfaService;
         this.socialAccountService = socialAccountService;
+        this.hasher = hasher;
     }
 
     @Transactional
@@ -62,23 +67,30 @@ public class AuthService {
 
     @Transactional
     public AuthResponse authenticate(AuthRequest request) {
-        UserDto user = userService.checkPasswordReturnUser(request.getEmail(), request.getPassword());
+        try {
+            UserDto user = userService.getUserByEmail(request.getEmail());
 
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
-        }
+            if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+                throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
+            }
 
-        if (mfaService.isMfaEnabledForUser(user.getId())) {
+            checkPassword(request.getPassword(), user.getHashedPassword());
+
+            if (mfaService.isMfaEnabledForUser(user.getId())) {
+                return AuthResponse.builder()
+                        .mfaTempToken(tokenService.createMfaTempToken(user))
+                        .mfaRequired(true)
+                        .build();
+            }
+
             return AuthResponse.builder()
-                    .mfaTempToken(tokenService.createMfaTempToken(user))
-                    .mfaRequired(true)
+                    .accessToken(tokenService.createAccessToken(user))
+                    .refreshToken(tokenService.createRefreshToken(user))
                     .build();
-        }
 
-        return AuthResponse.builder()
-                .accessToken(tokenService.createAccessToken(user))
-                .refreshToken(tokenService.createRefreshToken(user))
-                .build();
+        } catch (EntityNotFoundException e) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
     }
 
     @Transactional
@@ -139,14 +151,16 @@ public class AuthService {
 
     @Transactional
     public void changePassword(UUID userId, String oldPassword, String newPassword) {
-        userService.checkPasswordReturnUser(userId, oldPassword);
+        UserDto user = userService.getUserById(userId);
+        checkPassword(oldPassword, user.getHashedPassword());
+
         userService.updateUserPassword(userId, newPassword);
         tokenService.revokeAllUserTokens(userId);
     }
 
     @Transactional
     public void setPassword(UUID userId, String password) {
-        if (userService.isPasswordSetForUser(userId)){
+        if (userService.isPasswordSetForUser(userId)) {
             throw new PermissionDeniedException("Password has already been set");
         }
         userService.updateUserPassword(userId, password);
@@ -184,6 +198,15 @@ public class AuthService {
             UserDto user = userService.createUserFromOAuth2(userData);
             socialAccountService.linkSocialAccount(userData, user.getId());
             return user;
+        }
+    }
+
+    private void checkPassword(String enteredPassword, String hashedPassword) {
+        if (hashedPassword == null) {
+            throw new PasswordNotSetException();
+        }
+        if (!hasher.verify(enteredPassword, hashedPassword)) {
+            throw new InvalidCredentialsException("Invalid email or password");
         }
     }
 }

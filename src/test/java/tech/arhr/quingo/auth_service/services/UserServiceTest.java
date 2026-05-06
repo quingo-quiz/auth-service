@@ -55,60 +55,6 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void checkPasswordReturnUser_EmailNotFound_ThrowsInvalidCredentialsException() {
-        String email = "email@example.com";
-        String password = "password";
-
-        when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.checkPasswordReturnUser(email, password))
-                .isInstanceOf(InvalidCredentialsException.class);
-    }
-
-    @Test
-    void checkPasswordReturnUser_InvalidPassword_ThrowsInvalidCredentialsException() {
-        String email = "email@example.com";
-        String password = "wrong-password";
-        String hashedPassword = "hashed-correctPassword";
-
-        UserEntity userEntity = new UserEntity();
-        userEntity.setEmail(email);
-        userEntity.setHashedPassword(hashedPassword);
-
-        when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.of(userEntity));
-        when(hasher.verify(password, hashedPassword)).thenReturn(false);
-
-        assertThatThrownBy(() -> userService.checkPasswordReturnUser(email, password))
-                .isInstanceOf(InvalidCredentialsException.class);
-    }
-
-    @Test
-    void checkPasswordReturnUser_ValidCredentials_ReturnsUserDto() {
-        String email = "email@example.com";
-        String password = "correctPassword";
-        String hashedPassword = "hashed-correctPassword";
-
-        UserEntity userEntity = new UserEntity();
-        userEntity.setId(UUID.randomUUID());
-        userEntity.setEmail(email);
-        userEntity.setHashedPassword(hashedPassword);
-
-        UserDto expectedDto = new UserDto();
-        expectedDto.setId(userEntity.getId());
-        expectedDto.setEmail(email);
-
-        when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.of(userEntity));
-        when(hasher.verify(password, hashedPassword)).thenReturn(true);
-        when(userMapper.toDto(userEntity)).thenReturn(expectedDto);
-
-        UserDto result = userService.checkPasswordReturnUser(email, password);
-
-        assertThat(result)
-                .isNotNull()
-                .isEqualTo(expectedDto);
-    }
-
-    @Test
     void getUserById_UserNotFound_ThrowsEntityNotFoundException() {
         UUID userId = UUID.randomUUID();
 
@@ -232,27 +178,6 @@ class UserServiceTest {
         assertThat(saved.getRoles()).containsExactly(UserRole.USER);
         assertThat(saved.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(saved.isEmailVerified()).isFalse();
-    }
-
-    @Test
-    void checkPasswordReturnUserById_ValidCredentials_ReturnsUserDto() {
-        UUID userId = UUID.randomUUID();
-        String rawPassword = "secret";
-        String hashedPassword = "hashed-secret";
-
-        UserEntity entity = new UserEntity();
-        entity.setId(userId);
-        entity.setHashedPassword(hashedPassword);
-
-        UserDto expected = UserDto.builder().id(userId).build();
-
-        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(entity));
-        when(hasher.verify(rawPassword, hashedPassword)).thenReturn(true);
-        when(userMapper.toDto(entity)).thenReturn(expected);
-
-        UserDto result = userService.checkPasswordReturnUser(userId, rawPassword);
-
-        assertThat(result).isEqualTo(expected);
     }
 
     @Test

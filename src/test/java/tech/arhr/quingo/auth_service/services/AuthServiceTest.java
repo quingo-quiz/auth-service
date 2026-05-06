@@ -20,6 +20,7 @@ import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundExcept
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 import tech.arhr.quingo.auth_service.services.mfa.MfaService;
 import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
+import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.UUID;
@@ -49,11 +50,14 @@ class AuthServiceTest {
     @Mock
     private MfaService mfaService;
 
+    @Mock
+    private Hasher hasher;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(tokenService, tokenMapper, userService,  verificationService, socialAccountService, mfaService);
+        authService = new AuthService(tokenService, tokenMapper, userService, verificationService, socialAccountService, mfaService, hasher);
     }
 
     @Test
@@ -118,21 +122,23 @@ class AuthServiceTest {
                 .isInstanceOf(InvalidTokenException.class);
     }
 
-        @Test
-        void authenticate_MfaEnabledUser_ReturnsMfaChallenge() {
+    @Test
+    void authenticate_MfaEnabledUser_ReturnsMfaChallenge() {
         AuthRequest request = new AuthRequest();
         request.setEmail("user@test.com");
         request.setPassword("password");
 
         UserDto user = UserDto.builder()
-            .id(UUID.randomUUID())
-            .accountStatus(AccountStatus.ACTIVE)
-            .build();
+                .id(UUID.randomUUID())
+                .accountStatus(AccountStatus.ACTIVE)
+                .hashedPassword("password")
+                .build();
         TokenDto mfaToken = TokenDto.builder().id(UUID.randomUUID()).token("mfa-token").build();
 
-        when(userService.checkPasswordReturnUser(request.getEmail(), request.getPassword())).thenReturn(user);
+        when(userService.getUserByEmail(request.getEmail())).thenReturn(user);
         when(tokenService.createMfaTempToken(user)).thenReturn(mfaToken);
         when(mfaService.isMfaEnabledForUser(user.getId())).thenReturn(true);
+        when(hasher.verify(anyString(), anyString())).thenReturn(true);
 
         AuthResponse result = authService.authenticate(request);
 
@@ -142,28 +148,28 @@ class AuthServiceTest {
         assertThat(result.getRefreshToken()).isNull();
         verify(tokenService, never()).createAccessToken(any());
         verify(tokenService, never()).createRefreshToken(any());
-        }
+    }
 
-        @Test
-        void authenticate_NonActiveUser_ThrowsAccountNotActiveException() {
+    @Test
+    void authenticate_NonActiveUser_ThrowsAccountNotActiveException() {
         AuthRequest request = new AuthRequest();
         request.setEmail("user@test.com");
         request.setPassword("password");
 
         UserDto user = UserDto.builder()
-            .id(UUID.randomUUID())
-            .accountStatus(AccountStatus.BLOCKED)
-            .build();
+                .id(UUID.randomUUID())
+                .accountStatus(AccountStatus.BLOCKED)
+                .build();
 
-        when(userService.checkPasswordReturnUser(request.getEmail(), request.getPassword())).thenReturn(user);
+        when(userService.getUserByEmail(request.getEmail())).thenReturn(user);
 
         assertThatThrownBy(() -> authService.authenticate(request))
-            .isInstanceOf(AccountNotActiveException.class)
-            .hasMessageContaining("BLOCKED");
-        }
+                .isInstanceOf(AccountNotActiveException.class)
+                .hasMessageContaining("BLOCKED");
+    }
 
-        @Test
-        void verifyOtpIssueTokens_ValidRequest_VerifiesOtpAndReturnsTokenPair() {
+    @Test
+    void verifyOtpIssueTokens_ValidRequest_VerifiesOtpAndReturnsTokenPair() {
         UUID userId = UUID.randomUUID();
         OtpVerifyRequest request = new OtpVerifyRequest();
         request.setCode("123456");
@@ -183,31 +189,38 @@ class AuthServiceTest {
         assertThat(response.getAccessToken()).isEqualTo(access);
         assertThat(response.getRefreshToken()).isEqualTo(refresh);
         verify(mfaService).verifyOtpCode(userId, request.getCode());
-        }
+    }
 
-        @Test
-        void changePassword_ValidRequest_UpdatesPasswordAndRevokesSessions() {
+    @Test
+    void changePassword_ValidRequest_UpdatesPasswordAndRevokesSessions() {
         UUID userId = UUID.randomUUID();
+        UserDto dto =  UserDto.builder()
+                .id(userId)
+                .hashedPassword("hash")
+                .build();
+
         ChangePasswordRequest request = new ChangePasswordRequest();
-        request.setOldPassword("oldPass123");
-        request.setNewPassword("newPass123");
+        request.setOldPassword("oldPass");
+        request.setNewPassword("newPass");
+
+        when(userService.getUserById(userId)).thenReturn(dto);
+        when(hasher.verify("oldPass", "hash")).thenReturn(true);
 
         authService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
 
-        verify(userService).checkPasswordReturnUser(userId, "oldPass123");
-        verify(userService).updateUserPassword(userId, "newPass123");
+        verify(userService).updateUserPassword(userId, "newPass");
         verify(tokenService).revokeAllUserTokens(userId);
-        }
+    }
 
-        @Test
-        void processOAuth2User_ExistingSocialAccount_ReturnsLinkedUser() {
+    @Test
+    void processOAuth2User_ExistingSocialAccount_ReturnsLinkedUser() {
         OAuth2UserData userData = OAuth2UserData.builder()
-            .provider(OAuth2Provider.GITHUB)
-            .providerUserId("provider-id")
-            .email("user@test.com")
-            .emailVerified(true)
-            .username("username")
-            .build();
+                .provider(OAuth2Provider.GITHUB)
+                .providerUserId("provider-id")
+                .email("user@test.com")
+                .emailVerified(true)
+                .username("username")
+                .build();
 
         UUID userId = UUID.randomUUID();
         SocialAccountDto account = new SocialAccountDto();
@@ -224,26 +237,26 @@ class AuthServiceTest {
         assertThat(result).isEqualTo(user);
         verify(userService, never()).createUserFromOAuth2(any());
         verify(socialAccountService, never()).linkSocialAccount(any(), any());
-        }
+    }
 
-        @Test
-        void processOAuth2User_NewProviderUser_ExistingLocalUnverifiedUser_ClearsPasswordAndRevokesTokens() {
+    @Test
+    void processOAuth2User_NewProviderUser_ExistingLocalUnverifiedUser_ClearsPasswordAndRevokesTokens() {
         OAuth2UserData userData = OAuth2UserData.builder()
-            .provider(OAuth2Provider.GOOGLE)
-            .providerUserId("google-id")
-            .email("user@test.com")
-            .emailVerified(true)
-            .username("username")
-            .build();
+                .provider(OAuth2Provider.GOOGLE)
+                .providerUserId("google-id")
+                .email("user@test.com")
+                .emailVerified(true)
+                .username("username")
+                .build();
 
         UserDto localUser = UserDto.builder()
-            .id(UUID.randomUUID())
-            .email("user@test.com")
-            .emailVerified(false)
-            .build();
+                .id(UUID.randomUUID())
+                .email("user@test.com")
+                .emailVerified(false)
+                .build();
 
         when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-            .thenThrow(new EntityNotFoundException("Social account not found"));
+                .thenThrow(new EntityNotFoundException("Social account not found"));
         when(userService.getUserByEmail("user@test.com")).thenReturn(localUser);
 
         UserDto result = authService.processOAuth2User(userData);
@@ -252,51 +265,51 @@ class AuthServiceTest {
         verify(userService).clearUserPassword(localUser.getId());
         verify(tokenService).revokeAllUserTokens(localUser.getId());
         verify(socialAccountService).linkSocialAccount(userData, localUser.getId());
-        }
+    }
 
-        @Test
-        void processOAuth2User_NewProviderUser_NewLocalUser_CreatesAndLinks() {
+    @Test
+    void processOAuth2User_NewProviderUser_NewLocalUser_CreatesAndLinks() {
         OAuth2UserData userData = OAuth2UserData.builder()
-            .provider(OAuth2Provider.GOOGLE)
-            .providerUserId("google-id")
-            .email("new@test.com")
-            .emailVerified(true)
-            .username("new-user")
-            .build();
+                .provider(OAuth2Provider.GOOGLE)
+                .providerUserId("google-id")
+                .email("new@test.com")
+                .emailVerified(true)
+                .username("new-user")
+                .build();
 
         UserDto created = UserDto.builder().id(UUID.randomUUID()).build();
 
         when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-            .thenThrow(new EntityNotFoundException("Social account not found"));
+                .thenThrow(new EntityNotFoundException("Social account not found"));
         when(userService.getUserByEmail("new@test.com"))
-            .thenThrow(new EntityNotFoundException("User not found"));
+                .thenThrow(new EntityNotFoundException("User not found"));
         when(userService.createUserFromOAuth2(userData)).thenReturn(created);
 
         UserDto result = authService.processOAuth2User(userData);
 
         assertThat(result).isEqualTo(created);
         verify(socialAccountService).linkSocialAccount(userData, created.getId());
-        }
+    }
 
-        @Test
-        void processOAuth2User_UnverifiedProviderEmailForExistingUser_ThrowsOAuth2AuthenticationException() {
+    @Test
+    void processOAuth2User_UnverifiedProviderEmailForExistingUser_ThrowsOAuth2AuthenticationException() {
         OAuth2UserData userData = OAuth2UserData.builder()
-            .provider(OAuth2Provider.GOOGLE)
-            .providerUserId("google-id")
-            .email("user@test.com")
-            .emailVerified(false)
-            .username("username")
-            .build();
+                .provider(OAuth2Provider.GOOGLE)
+                .providerUserId("google-id")
+                .email("user@test.com")
+                .emailVerified(false)
+                .username("username")
+                .build();
 
         UserDto localUser = UserDto.builder().id(UUID.randomUUID()).emailVerified(true).build();
 
         when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-            .thenThrow(new EntityNotFoundException("Social account not found"));
+                .thenThrow(new EntityNotFoundException("Social account not found"));
         when(userService.getUserByEmail("user@test.com")).thenReturn(localUser);
 
         assertThatThrownBy(() -> authService.processOAuth2User(userData))
-            .isInstanceOf(OAuth2AuthenticationException.class)
-            .hasMessageContaining("unverified provider account email");
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .hasMessageContaining("unverified provider account email");
 
         verify(socialAccountService, never()).linkSocialAccount(any(), any());
     }

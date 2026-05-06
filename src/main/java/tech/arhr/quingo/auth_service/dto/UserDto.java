@@ -23,4 +23,5 @@ public class UserDto {
     private List<UserRole> roles;
     private boolean emailVerified;
     private AccountStatus accountStatus;
+    private String hashedPassword;
 }
