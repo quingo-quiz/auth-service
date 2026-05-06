@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
 import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
+import tech.arhr.quingo.auth_service.dto.UpdateUserRequest;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
@@ -236,6 +237,26 @@ public class UserService {
     private UserEntity findByEmailOrThrow(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
+    }
+
+    @Transactional
+    public UserDto updateUser(UUID userId, UpdateUserRequest request) {
+        UserEntity userEntity = findByIdOrThrow(userId);
+
+        if (request.getUsername() != null && !request.getUsername().equals(userEntity.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new UsernameAlreadyExistsException();
+            }
+            userEntity.setUsername(request.getUsername());
+        }
+
+        if (request.getBio() != null) {
+            userEntity.setBio(request.getBio());
+        }
+
+        userEntity = userRepository.save(userEntity);
+        evictUserCache(userId);
+        return userMapper.toDto(userEntity);
     }
 
     private void evictUserCache(UUID userId) {

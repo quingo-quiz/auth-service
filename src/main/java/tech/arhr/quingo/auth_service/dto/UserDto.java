@@ -19,6 +19,7 @@ public class UserDto {
     private UUID id;
     private String username;
     private String email;
+    private String bio;
     private List<UserRole> roles;
     private boolean emailVerified;
     private boolean mfaEnabled;

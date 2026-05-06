@@ -5,10 +5,20 @@ model User {
   id: uuid;
   username: string;
   email: string;
+  bio?: string;
   roles: Roles[];
   emailVerified: boolean;
   mfaEnabled: boolean;
   accountStatus: AccountStatus;
+}
+
+model UpdateUserRequest {
+  @minLength(1)
+  @maxLength(50)
+  username?: string;
+
+  @maxLength(500)
+  bio?: string;
 }
 
 @doc("Запрос на смену пароля")

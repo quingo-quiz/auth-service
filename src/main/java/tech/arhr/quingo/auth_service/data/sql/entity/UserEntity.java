@@ -29,6 +29,9 @@ public class UserEntity {
     @Column(length = 100, unique = true)
     private String email;
 
+    @Column(length = 500)
+    private String bio;
+
     @Column(name = "password")
     private String hashedPassword;
 

@@ -20,7 +20,7 @@ class UserControllerTest extends BaseRestApiTest {
                 .contentType(ContentType.JSON)
                 .cookie("access_token", tokens.accessToken())
                 .when()
-                .get("/user/info")
+                .get("/user/me")
                 .then()
                 .log().all()
                 .statusCode(200)

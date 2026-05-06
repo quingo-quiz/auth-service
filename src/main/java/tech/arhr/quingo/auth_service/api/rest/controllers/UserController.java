@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.*;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.SecurityStatusDto;
+import tech.arhr.quingo.auth_service.dto.UpdateUserRequest;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
 import tech.arhr.quingo.auth_service.services.SecurityService;
@@ -28,7 +29,7 @@ public class UserController {
     private final TimeProvider timeProvider;
     private final SecurityService securityService;
 
-    @GetMapping("/info")
+    @GetMapping("/me")
     public ResponseEntity<SuccessResponse<UserDto>> info() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
@@ -74,6 +75,19 @@ public class UserController {
                 ));
     }
 
+    @PatchMapping("/me")
+    public ResponseEntity<SuccessResponse<UserDto>> updateUserInfo(
+        @Valid @RequestBody UpdateUserRequest request) {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserDto updatedUser = userService.updateUser(auth.getUser().getId(), request);
+        return ResponseEntity.ok(
+                SuccessResponse.of(
+                        HttpStatus.OK,
+                        updatedUser,
+                        timeProvider.now()
+                ));
+    }
+
     @GetMapping("/security-status")
     public ResponseEntity<SuccessResponse<SecurityStatusDto>> getSecurityStatus() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
@@ -88,7 +102,7 @@ public class UserController {
     }
 
     @PostMapping("/password/send-reset")
-    public ResponseEntity<SuccessResponse<Void>> resetPassword(
+    public ResponseEntity<SuccessResponse<Void>> sendResetPassword(
             @Valid @RequestBody SendResetPasswordRequest request
     ) {
         String email = request.getEmail();
