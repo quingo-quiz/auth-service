@@ -157,7 +157,7 @@ class MfaServiceTest {
 
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
 
-        assertThatThrownBy(() -> mfaService.verifyOtpCode(userId, request))
+        assertThatThrownBy(() -> mfaService.verifyOtpCode(userId, request.getCode()))
                 .isInstanceOf(MfaSettingsInvalidException.class)
                 .hasMessageContaining("not enabled");
     }
@@ -178,7 +178,7 @@ class MfaServiceTest {
         when(mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP)).thenReturn(List.of(settings));
         when(otpService.verifyCode("encrypted", "123456")).thenReturn(true);
 
-        mfaService.verifyOtpCode(userId, request);
+        mfaService.verifyOtpCode(userId, request.getCode());
 
         verify(otpService).verifyCode("encrypted", "123456");
     }

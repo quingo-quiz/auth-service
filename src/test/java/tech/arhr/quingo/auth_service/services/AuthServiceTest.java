@@ -183,7 +183,7 @@ class AuthServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo(access);
         assertThat(response.getRefreshToken()).isEqualTo(refresh);
-        verify(mfaService).verifyOtpCode(userId, request);
+        verify(mfaService).verifyOtpCode(userId, request.getCode());
         }
 
         @Test

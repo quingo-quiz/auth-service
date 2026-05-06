@@ -21,6 +21,17 @@ interface MfaRoutes {
   };
 
   @tag("MFA")
+    @summary("Отключение OTP")
+    @post
+    @route("/otp/disable")
+    otpDisable(
+         @body request: OtpDisableRequest,
+    ): {
+      @statusCode statusCode: 401;
+      @body body: ErrorResponse;
+    };
+
+  @tag("MFA")
   @summary("Подтверждение включения OTP в рамках MFA")
   @post
   @route("/otp/connect/confirm")

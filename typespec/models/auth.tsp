@@ -49,6 +49,12 @@ model OtpVerifyRequest {
   mfaTempToken?: string;
 }
 
+model OtpDisableRequest {
+  @minLength(1)
+  @maxLength(32)
+  code: string;
+}
+
 model OtpConnectDto {
   secretUri: string;
 }

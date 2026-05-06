@@ -1,5 +1,6 @@
 package tech.arhr.quingo.auth_service.api.rest.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.auth.OtpConnectDto;
+import tech.arhr.quingo.auth_service.dto.auth.OtpDisableDto;
 import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
 import tech.arhr.quingo.auth_service.services.mfa.MfaService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
@@ -30,6 +32,20 @@ public class MfaSettingsController {
         return ResponseEntity.ok(SuccessResponse.of(
                 HttpStatus.OK,
                 dto,
+                timeProvider.now()
+        ));
+    }
+
+    @PostMapping("/otp/disable")
+    public ResponseEntity<SuccessResponse<Void>> otpDisable(
+            @RequestBody @Valid OtpDisableDto dto
+    ) {
+        JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        mfaService.disableOtp(auth.getUser().getId(), dto.getCode());
+
+        return ResponseEntity.ok(SuccessResponse.of(
+                HttpStatus.OK,
+               null,
                 timeProvider.now()
         ));
     }

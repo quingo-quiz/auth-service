@@ -84,7 +84,7 @@ public class AuthService {
     @Transactional
     public AuthResponse verifyOtpIssueTokens(OtpVerifyRequest request) {
         UUID userId = tokenService.validateMfaTempToken(request.getMfaTempToken());
-        mfaService.verifyOtpCode(userId, request);
+        mfaService.verifyOtpCode(userId, request.getCode());
 
         UserDto user = userService.getUserById(userId);
 

@@ -182,6 +182,14 @@ public class UserService {
         userRepository.save(entity);
     }
 
+    @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
+    public void setMfaDisabledForUser(UUID userId) {
+        UserEntity entity = findByIdOrThrow(userId);
+        entity.setMfaEnabled(false);
+        userRepository.save(entity);
+    }
+
     @Transactional(readOnly = true)
     public boolean isPasswordSetForUser(UUID userId) {
         UserEntity entity = findByIdOrThrow(userId);

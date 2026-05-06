@@ -54,6 +54,17 @@ public class MfaService {
     }
 
     @Transactional
+    public void disableOtp(UUID userId, String code) {
+        verifyOtpCode(userId, code);
+
+        List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP);
+
+        var entity = entities.getFirst();
+        mfaSettingsRepository.delete(entity);
+        userService.setMfaDisabledForUser(userId);
+    }
+
+    @Transactional
     public void verifyConnectingOtp(UserDto user, OtpVerifyRequest request) {
         List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(user.getId(), MfaType.OTP);
         if (entities.isEmpty()) {
@@ -76,7 +87,7 @@ public class MfaService {
     }
 
     @Transactional(readOnly = true)
-    public void verifyOtpCode(UUID userId, OtpVerifyRequest request) {
+    public void verifyOtpCode(UUID userId, String code) {
         List<UserMfaSettingsEntity> entities = mfaSettingsRepository.findByUserIdAndType(userId, MfaType.OTP);
         if (entities.isEmpty()) {
             throw new MfaSettingsInvalidException("2FA settings for OTP method not found");
@@ -88,7 +99,7 @@ public class MfaService {
             throw new MfaSettingsInvalidException("2FA OTP method is not enabled");
         }
 
-        if (!otpService.verifyCode(encriptedSecret, request.getCode())) {
+        if (!otpService.verifyCode(encriptedSecret, code)) {
             throw new MfaFailedException("2FA code verification failed");
         }
     }
@@ -96,6 +107,7 @@ public class MfaService {
     @Transactional(readOnly = true)
     public List<MfaType> getUserMfaTypes(UUID userId) {
         return mfaSettingsRepository.findByUserId(userId).stream()
+                .filter(UserMfaSettingsEntity::isMethodEnabled)
                 .map(UserMfaSettingsEntity::getType)
                 .collect(Collectors.toList());
     }
