@@ -44,6 +44,12 @@ class UserServiceTest {
     @Mock
     private JpaUserRepository jpaUserRepository;
 
+    @Mock
+    private VerificationService verificationService;
+
+    @Mock
+    private org.springframework.cache.CacheManager cacheManager;
+
     @InjectMocks
     private UserService userService;
 
@@ -354,5 +360,57 @@ class UserServiceTest {
         assertThat(saved.getHashedPassword()).isNull();
         assertThat(saved.isEmailVerified()).isTrue();
         assertThat(saved.getRoles()).containsExactly(UserRole.USER);
+    }
+
+    @Test
+    void verifyEmail_ValidToken_SetsUserVerifiedAndSaves() {
+        String token = "valid-token";
+        UUID userId = UUID.randomUUID();
+        UserEntity user = new UserEntity();
+        user.setId(userId);
+        user.setEmailVerified(false);
+
+        when(verificationService.validateTokenGetUserId(token, tech.arhr.quingo.auth_service.enums.VerificationTokenType.VERIFY_EMAIL)).thenReturn(userId);
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+        when(cacheManager.getCache(anyString())).thenReturn(null);
+
+        userService.verifyEmail(token);
+
+        assertThat(user.isEmailVerified()).isTrue();
+        verify(jpaUserRepository).save(user);
+    }
+
+    @Test
+    void sendResetPassword_ExistingUser_SendsEmail() {
+        String email = "test@example.com";
+        UserEntity user = new UserEntity();
+        user.setId(UUID.randomUUID());
+
+        when(jpaUserRepository.findByEmail(email)).thenReturn(Optional.of(user));
+
+        userService.sendResetPassword(email);
+
+        verify(verificationService).sendResetPasswordEmail(email, user.getId());
+    }
+
+    @Test
+    void resetPassword_ValidToken_UpdatesPasswordAndRevokesTokens() {
+        String token = "reset-token";
+        String newPassword = "newPassword";
+        UUID userId = UUID.randomUUID();
+        UserEntity user = new UserEntity();
+        user.setId(userId);
+
+        when(verificationService.validateTokenGetUserId(token, tech.arhr.quingo.auth_service.enums.VerificationTokenType.RESET_PASSWORD)).thenReturn(userId);
+        when(jpaUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(hasher.hash(newPassword)).thenReturn("hashedPassword");
+        when(cacheManager.getCache(anyString())).thenReturn(null);
+
+        userService.resetPassword(token, newPassword);
+
+        assertThat(user.getHashedPassword()).isEqualTo("hashedPassword");
+        verify(jpaUserRepository).save(user);
+        verify(tokenService).revokeAllUserTokens(userId);
     }
 }

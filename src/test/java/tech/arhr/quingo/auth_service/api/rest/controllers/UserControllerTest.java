@@ -42,7 +42,7 @@ class UserControllerTest extends BaseRestApiTest {
                         "newPassword", newPassword
                 ))
                 .when()
-                .post("/user/change-password")
+                .post("/user/password/change")
                 .then()
                 .log().all()
                 .statusCode(200);
