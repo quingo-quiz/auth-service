@@ -3,7 +3,6 @@ package tech.arhr.quingo.auth_service.services.oauth2;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -17,14 +16,16 @@ import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.dto.auth.SessionTokens;
 import tech.arhr.quingo.auth_service.services.SessionService;
 import tech.arhr.quingo.auth_service.services.UserService;
+import tech.arhr.quingo.auth_service.utils.callbacks.CallbackCode;
+import tech.arhr.quingo.auth_service.utils.callbacks.CallbackStatus;
+import tech.arhr.quingo.auth_service.utils.callbacks.CallbackUrlBuilder;
 
 import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-    @Value("${spring.application.frontend-url}")
-    private String frontendUrl;
+    private final CallbackUrlBuilder callbackUrlBuilder;
 
     private final SessionService sessionService;
     private final UserService userService;
@@ -41,11 +42,16 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         TokenDto refresh = sessionTokens.getRefreshToken();
         TokenDto access = sessionTokens.getAccessToken();
 
-
         response.addHeader("Set-Cookie", createCookie.createAccessCookie(access).toString());
         response.addHeader("Set-Cookie", createCookie.createRefreshCookie(refresh).toString());
 
-        getRedirectStrategy().sendRedirect(request, response, frontendUrl);
+        String targetUri = callbackUrlBuilder.buildCallbackUrl(
+                CallbackStatus.SUCCESS,
+                CallbackCode.OAUTH2_SUCCESS,
+                ""
+        );
+
+        getRedirectStrategy().sendRedirect(request, response, targetUri);
     }
 
     private UserAgentInfoDto getClientInfoFromContext() {
