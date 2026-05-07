@@ -6,15 +6,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import tech.arhr.quingo.auth_service.api.rest.models.AuthResponseModel;
+import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenApiModel;
 import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenRequest;
-import tech.arhr.quingo.auth_service.api.rest.models.SessionModel;
 import tech.arhr.quingo.auth_service.api.rest.models.SuccessResponse;
 import tech.arhr.quingo.auth_service.api.rest.utils.AuthStrategy;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
+import tech.arhr.quingo.auth_service.api.security.CustomWebAuthenticationDetails;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
+import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
 import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
 import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
@@ -40,7 +43,7 @@ public class AuthController {
             @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader) {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
-        AuthResponse authResponse = authService.register(registerRequest);
+        AuthResponse authResponse = authService.register(registerRequest, getClientInfoFromContext());
         return createSuccessAuthResponse(authResponse, strategy);
     }
 
@@ -50,7 +53,7 @@ public class AuthController {
             @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader) {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
-        AuthResponse authResponse = authService.authenticate(authRequest);
+        AuthResponse authResponse = authService.authenticate(authRequest, getClientInfoFromContext());
         return createSuccessAuthResponse(authResponse, strategy);
     }
 
@@ -62,7 +65,7 @@ public class AuthController {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
         String refreshToken = resolveRefreshToken(refreshTokenFromCookie, refreshTokenRequest, strategy);
-        AuthResponse authResponse = authService.refresh(refreshToken);
+        AuthResponse authResponse = authService.refresh(refreshToken, getClientInfoFromContext());
 
         return createSuccessAuthResponse(authResponse, strategy);
     }
@@ -114,10 +117,10 @@ public class AuthController {
     }
 
     @GetMapping("/sessions")
-    public ResponseEntity<SuccessResponse<List<SessionModel>>> getSessions() {
+    public ResponseEntity<SuccessResponse<List<RefreshTokenApiModel>>> getSessions() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
-        List<SessionModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
+        List<RefreshTokenApiModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,
@@ -133,7 +136,7 @@ public class AuthController {
             @RequestHeader(value = "Auth-Strategy", defaultValue = "cookie") String strategyHeader) {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
-        AuthResponse response = authService.verifyOtpIssueTokens(request);
+        AuthResponse response = authService.verifyOtpIssueTokens(request, getClientInfoFromContext());
 
         return createSuccessAuthResponse(response, strategy);
     }
@@ -197,5 +200,13 @@ public class AuthController {
             }
             return fromCookie;
         }
+    }
+
+    private UserAgentInfoDto getClientInfoFromContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof CustomWebAuthenticationDetails details) {
+            return details.getUserAgentInfo();
+        }
+        return new UserAgentInfoDto();
     }
 }

@@ -16,7 +16,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-    private final AuthService authService;
+    private final OAuth2IntegrationService integrationService;
     private final OAuth2UserDataParser parser;
 
     @Override
@@ -26,7 +26,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         OAuth2UserData data = parser.parseUserData(provider, oAuth2User);
 
-        authService.processOAuth2User(data);
+        integrationService.processOAuth2User(data);
         return oAuth2User;
     }
 }

@@ -2,6 +2,7 @@ package tech.arhr.quingo.auth_service.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.redis.interfaces.RedisVerificationTokenRepository;
@@ -11,6 +12,7 @@ import tech.arhr.quingo.auth_service.dto.VerificationTokenDto;
 import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
 import tech.arhr.quingo.auth_service.events.user.UserEmailVerifiedEvent;
 import tech.arhr.quingo.auth_service.events.user.UserPasswordResetEvent;
+import tech.arhr.quingo.auth_service.events.user.UserRegisteredEvent;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyVerifiedException;
 import tech.arhr.quingo.auth_service.exceptions.auth.TokenNotFoundException;
 import tech.arhr.quingo.auth_service.utils.VerificationTokenMapper;
@@ -72,13 +74,9 @@ public class VerificationService {
         publisher.publishEvent(new UserPasswordResetEvent(opt.get().getUserId(), newPassword));
     }
 
-    public UUID validateTokenGetUserId(String token, VerificationTokenType type) {
-        Optional<VerificationTokenRedisModel> opt = redisRepository.get(token, type);
-        redisRepository.delete(token, type);
-        if (opt.isPresent()) {
-            return opt.get().getUserId();
-        } else {
-            throw new TokenNotFoundException("Verification token not found");
-        }
+    @EventListener(UserRegisteredEvent.class)
+    @Transactional
+    public void onUserRegistered(UserRegisteredEvent event) {
+        sendVerificationEmail(event.user());
     }
 }
