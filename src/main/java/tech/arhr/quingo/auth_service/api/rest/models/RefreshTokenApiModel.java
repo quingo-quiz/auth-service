@@ -6,10 +6,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Data
-public class SessionModel {
+public class RefreshTokenApiModel {
     private UUID tokenId;
+    private UUID sessionId;
     private Instant issuedAt;
     private Instant expiresAt;
+    private boolean isCurrent;
 
     private String browser;
     private String os;

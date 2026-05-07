@@ -3,7 +3,8 @@ package tech.arhr.quingo.auth_service.services;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
@@ -15,6 +16,10 @@ import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
 import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
+import tech.arhr.quingo.auth_service.events.AllUserSessionsInvalidatedEvent;
+import tech.arhr.quingo.auth_service.events.user.UserEmailVerifiedEvent;
+import tech.arhr.quingo.auth_service.events.user.UserPasswordResetEvent;
+import tech.arhr.quingo.auth_service.events.user.UserRolesChangedEvent;
 import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
@@ -29,57 +34,26 @@ import java.util.UUID;
 
 @Service
 public class UserService {
-    private final TokenService tokenService;
     private final VerificationService verificationService;
     private final JpaUserRepository userRepository;
     private final UserMapper userMapper;
     private final Hasher hasher;
     private final CacheManager cacheManager;
+    private final ApplicationEventPublisher publisher;
 
     public UserService(
-            @Lazy TokenService tokenService, VerificationService verificationService,
+            VerificationService verificationService,
             JpaUserRepository userRepository,
             UserMapper userMapper,
-            Hasher hasher, CacheManager cacheManager) {
-        this.tokenService = tokenService;
+            Hasher hasher,
+            CacheManager cacheManager,
+            ApplicationEventPublisher publisher) {
         this.verificationService = verificationService;
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.hasher = hasher;
         this.cacheManager = cacheManager;
-    }
-
-
-    @Transactional(readOnly = true)
-    public UserDto checkPasswordReturnUser(String email, String password) {
-        UserEntity userEntity = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
-
-        if (userEntity.getHashedPassword() == null) {
-            throw new PasswordNotSetException();
-        }
-        if (!hasher.verify(password, userEntity.getHashedPassword())) {
-            throw new InvalidCredentialsException("Invalid email or password");
-        }
-
-        return userMapper.toDto(userEntity);
-    }
-
-    @Transactional(readOnly = true)
-    public UserDto checkPasswordReturnUser(UUID userId, String password) {
-        UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid userId or password"));
-
-
-        if (userEntity.getHashedPassword() == null) {
-            throw new PasswordNotSetException();
-        }
-
-        if (!hasher.verify(password, userEntity.getHashedPassword())) {
-            throw new InvalidCredentialsException("Invalid userId or password");
-        }
-
-        return userMapper.toDto(userEntity);
+        this.publisher = publisher;
     }
 
     @Transactional
@@ -152,7 +126,8 @@ public class UserService {
 
         entity.setAccountStatus(AccountStatus.BLOCKED);
         userRepository.save(entity);
-        tokenService.revokeAllUserTokens(userId);
+
+        publisher.publishEvent(new AllUserSessionsInvalidatedEvent(userId));
     }
 
     @Transactional
@@ -171,7 +146,8 @@ public class UserService {
 
         entity.setRoles(userRoles);
         userRepository.save(entity);
-        tokenService.refreshSessions(userId);
+
+        publisher.publishEvent(new UserRolesChangedEvent(userId, userRoles));
     }
 
     @Transactional(readOnly = true)
@@ -196,17 +172,7 @@ public class UserService {
     }
 
     @Transactional
-    public void verifyEmail(String token) {
-        UUID userId = verificationService.validateTokenGetUserId(token, VerificationTokenType.VERIFY_EMAIL);
-
-        UserEntity userEntity = findByIdOrThrow(userId);
-        userEntity.setEmailVerified(true);
-        evictUserCache(userId);
-        userRepository.save(userEntity);
-    }
-
-    @Transactional
-    public void sendResetPassword(String email){
+    public void sendResetPassword(String email) {
         Optional<UserEntity> opt = userRepository.findByEmail(email);
         if (opt.isPresent()) {
             verificationService.sendResetPasswordEmail(email, opt.get().getId());
@@ -214,24 +180,7 @@ public class UserService {
     }
 
     @Transactional
-    public void resetPassword(String resetToken, String newPassword) {
-        UUID userId = verificationService.validateTokenGetUserId(resetToken, VerificationTokenType.RESET_PASSWORD);
-        updateUserPassword(userId, newPassword);
-        evictUserCache(userId);
-        tokenService.revokeAllUserTokens(userId);
-    }
-
-    private UserEntity findByIdOrThrow(UUID id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
-    }
-
-    private UserEntity findByEmailOrThrow(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
-    }
-
-    @Transactional
+    @CacheEvict(value = "users:cached", key = "#userId")
     public UserDto updateUser(UUID userId, UpdateUserRequest request) {
         UserEntity userEntity = findByIdOrThrow(userId);
 
@@ -247,8 +196,37 @@ public class UserService {
         }
 
         userEntity = userRepository.save(userEntity);
-        evictUserCache(userId);
         return userMapper.toDto(userEntity);
+    }
+
+    @EventListener(UserEmailVerifiedEvent.class)
+    public void onUserEmailVerified(UserEmailVerifiedEvent event) {
+        UUID userId = event.userId();
+
+        UserEntity userEntity = findByIdOrThrow(userId);
+        userEntity.setEmailVerified(true);
+        evictUserCache(userId);
+        userRepository.save(userEntity);
+    }
+
+    @EventListener(UserPasswordResetEvent.class)
+    @Transactional
+    public void onUserPasswordReset(UserPasswordResetEvent event) {
+        UUID userId = event.userId();
+        updateUserPassword(userId, event.newPassword());
+        evictUserCache(userId);
+
+        publisher.publishEvent(new AllUserSessionsInvalidatedEvent(userId));
+    }
+
+    private UserEntity findByIdOrThrow(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+    }
+
+    private UserEntity findByEmailOrThrow(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
     }
 
     private void evictUserCache(UUID userId) {

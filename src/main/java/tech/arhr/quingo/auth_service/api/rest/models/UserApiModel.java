@@ -1,4 +1,4 @@
-package tech.arhr.quingo.auth_service.dto;
+package tech.arhr.quingo.auth_service.api.rest.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
 import tech.arhr.quingo.auth_service.enums.UserRole;
-import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Data
 @Builder
-public class UserDto {
+public class UserApiModel {
     private UUID id;
     private String username;
     private String email;
@@ -23,5 +22,4 @@ public class UserDto {
     private List<UserRole> roles;
     private boolean emailVerified;
     private AccountStatus accountStatus;
-    private String hashedPassword;
 }

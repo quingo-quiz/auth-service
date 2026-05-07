@@ -64,6 +64,9 @@ model SessionModel {
   @doc("ID токена")
   tokenId: uuid;
 
+  @doc("ID сессии")
+  sessionId: uuid;
+
   @doc("Время выдачи")
   issuedAt: utcDateTime;
 

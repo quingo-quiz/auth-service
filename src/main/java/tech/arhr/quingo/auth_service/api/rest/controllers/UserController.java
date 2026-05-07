@@ -11,12 +11,12 @@ import tech.arhr.quingo.auth_service.api.rest.models.*;
 import tech.arhr.quingo.auth_service.api.security.JwtAuthenticationToken;
 import tech.arhr.quingo.auth_service.dto.SecurityStatusDto;
 import tech.arhr.quingo.auth_service.dto.UpdateUserRequest;
-import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.services.AuthService;
 import tech.arhr.quingo.auth_service.services.SecurityService;
 import tech.arhr.quingo.auth_service.services.UserService;
 import tech.arhr.quingo.auth_service.services.VerificationService;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
+import tech.arhr.quingo.auth_service.utils.UserMapper;
 
 @Slf4j
 @RestController
@@ -28,12 +28,15 @@ public class UserController {
     private final VerificationService verificationService;
     private final TimeProvider timeProvider;
     private final SecurityService securityService;
+    private final UserMapper userMapper;
 
     @GetMapping("/me")
-    public ResponseEntity<SuccessResponse<UserDto>> info() {
+    public ResponseEntity<SuccessResponse<UserApiModel>> info() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
-        UserDto user = userService.getUserById(auth.getUser().getId());
+        UserApiModel user = userMapper.toApiModel(
+                userService.getUserById(auth.getUser().getId()));
+
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,
@@ -76,10 +79,13 @@ public class UserController {
     }
 
     @PatchMapping("/me")
-    public ResponseEntity<SuccessResponse<UserDto>> updateUserInfo(
+    public ResponseEntity<SuccessResponse<UserApiModel>> updateUserInfo(
         @Valid @RequestBody UpdateUserRequest request) {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-        UserDto updatedUser = userService.updateUser(auth.getUser().getId(), request);
+
+        UserApiModel updatedUser = userMapper.toApiModel(
+                userService.updateUser(auth.getUser().getId(), request));
+
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,
@@ -120,7 +126,7 @@ public class UserController {
     public ResponseEntity<SuccessResponse<Void>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request
     ) {
-        userService.resetPassword(request.getResetToken(), request.getNewPassword());
+        verificationService.verifyResetPassword(request.getResetToken(), request.getNewPassword());
 
         return ResponseEntity.ok(
                 SuccessResponse.of(
@@ -134,7 +140,7 @@ public class UserController {
     public ResponseEntity<SuccessResponse<Void>> verifyToken(
             @Valid @RequestBody VerifyEmailRequest request
     ) {
-        userService.verifyEmail(request.getVerificationToken());
+        verificationService.verifyEmailVerification(request.getVerificationToken());
 
         return ResponseEntity
                 .ok()

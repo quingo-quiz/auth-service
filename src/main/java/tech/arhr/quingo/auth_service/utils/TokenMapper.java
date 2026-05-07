@@ -2,7 +2,7 @@ package tech.arhr.quingo.auth_service.utils;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import tech.arhr.quingo.auth_service.api.rest.models.SessionModel;
+import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenApiModel;
 import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
@@ -29,5 +29,5 @@ public interface TokenMapper {
     @Mapping(source = "userAgentInfo.os", target = "os")
     @Mapping(source = "userAgentInfo.browser", target = "browser")
     @Mapping(source = "userAgentInfo.ipAddress", target = "ipAddress")
-    SessionModel toApiModel(TokenDto dto);
+    RefreshTokenApiModel toApiModel(TokenDto dto);
 }

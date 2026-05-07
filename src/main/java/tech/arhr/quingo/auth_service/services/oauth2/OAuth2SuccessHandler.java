@@ -5,19 +5,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 import tech.arhr.quingo.auth_service.api.rest.utils.CreateCookie;
+import tech.arhr.quingo.auth_service.api.security.CustomWebAuthenticationDetails;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
+import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
-import tech.arhr.quingo.auth_service.services.TokenService;
+import tech.arhr.quingo.auth_service.dto.auth.SessionTokens;
+import tech.arhr.quingo.auth_service.services.SessionService;
 import tech.arhr.quingo.auth_service.services.UserService;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     @Value("${spring.application.frontend-url}")
     private String frontendUrl;
 
-    private final TokenService tokenService;
+    private final SessionService sessionService;
     private final UserService userService;
     private final CreateCookie createCookie;
 
@@ -36,13 +37,22 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         UserDto userDto = userService.getUserByEmail(oAuth2User.getAttributes().get("email").toString());
-        TokenDto refresh = tokenService.createRefreshToken(userDto);
-        TokenDto access = tokenService.createAccessToken(userDto);
+        SessionTokens sessionTokens = sessionService.createSession(userDto, getClientInfoFromContext());
+        TokenDto refresh = sessionTokens.getRefreshToken();
+        TokenDto access = sessionTokens.getAccessToken();
 
 
         response.addHeader("Set-Cookie", createCookie.createAccessCookie(access).toString());
         response.addHeader("Set-Cookie", createCookie.createRefreshCookie(refresh).toString());
 
         getRedirectStrategy().sendRedirect(request, response, frontendUrl);
+    }
+
+    private UserAgentInfoDto getClientInfoFromContext() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof CustomWebAuthenticationDetails details) {
+            return details.getUserAgentInfo();
+        }
+        return new UserAgentInfoDto();
     }
 }

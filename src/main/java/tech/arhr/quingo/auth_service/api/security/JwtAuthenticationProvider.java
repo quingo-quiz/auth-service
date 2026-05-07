@@ -27,7 +27,8 @@ public class JwtAuthenticationProvider implements AuthenticationProvider {
                 jwtUserDetails,
                 null,
                 jwtUserDetails.getAuthorities(),
-                user
+                user,
+                token
         );
 //        Authentication auth = new UsernamePasswordAuthenticationToken(
 //                jwtUserDetails,

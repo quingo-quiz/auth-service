@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TokenDto {
     private UUID id;
+    private UUID sessionId;
     private String token;
     private Instant issuedAt;
     private Instant expiresAt;

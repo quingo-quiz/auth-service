@@ -19,6 +19,9 @@ public class TokenEntity {
     @Id
     private UUID id;
 
+    @Column(name = "session_id")
+    private UUID sessionId;
+
     @Column(length = 400)
     private String token;
     private Instant expiresAt;

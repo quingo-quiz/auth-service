@@ -1,23 +1,24 @@
 package tech.arhr.quingo.auth_service.services;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tech.arhr.quingo.auth_service.api.rest.models.SessionModel;
-import tech.arhr.quingo.auth_service.dto.auth.OtpVerifyRequest;
-import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
-import tech.arhr.quingo.auth_service.dto.SocialAccountDto;
+import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenApiModel;
+import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
-import tech.arhr.quingo.auth_service.dto.auth.AuthRequest;
-import tech.arhr.quingo.auth_service.dto.auth.AuthResponse;
-import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
+import tech.arhr.quingo.auth_service.dto.auth.*;
 import tech.arhr.quingo.auth_service.enums.AccountStatus;
+import tech.arhr.quingo.auth_service.events.AllUserSessionsInvalidatedEvent;
+import tech.arhr.quingo.auth_service.events.user.UserRegisteredEvent;
 import tech.arhr.quingo.auth_service.exceptions.auth.AccountNotActiveException;
+import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.services.mfa.MfaService;
+import tech.arhr.quingo.auth_service.utils.Hasher;
+import tech.arhr.quingo.auth_service.utils.JwtProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.util.List;
@@ -26,164 +27,163 @@ import java.util.UUID;
 @Slf4j
 @Service
 public class AuthService {
-    private final TokenService tokenService;
+    private final SessionService sessionService;
     private final UserService userService;
-    private final VerificationService verificationService;
     private final MfaService mfaService;
     private final TokenMapper tokenMapper;
-    private final SocialAccountService socialAccountService;
+    private final JwtProvider jwtProvider;
+    private final Hasher hasher;
+    private final ApplicationEventPublisher publisher;
 
     public AuthService(
-            TokenService tokenService,
+            SessionService sessionService,
             TokenMapper tokenMapper,
             UserService userService,
-            VerificationService verificationService,
-            SocialAccountService socialAccountService,
-            MfaService mfaService
+            MfaService mfaService,
+            Hasher hasher,
+            JwtProvider jwtProvider, ApplicationEventPublisher publisher
     ) {
-        this.tokenService = tokenService;
+        this.sessionService = sessionService;
         this.userService = userService;
         this.tokenMapper = tokenMapper;
-        this.verificationService = verificationService;
         this.mfaService = mfaService;
-        this.socialAccountService = socialAccountService;
+        this.jwtProvider = jwtProvider;
+        this.hasher = hasher;
+        this.publisher = publisher;
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request, UserAgentInfoDto agentInfo) {
         UserDto user = userService.createUser(request);
-        verificationService.sendVerificationEmail(user);
+        publisher.publishEvent(new UserRegisteredEvent(user));
 
+        SessionTokens tokens = sessionService.createSession(user, agentInfo);
         return AuthResponse.builder()
-                .accessToken(tokenService.createAccessToken(user))
-                .refreshToken(tokenService.createRefreshToken(user))
+                .accessToken(tokens.getAccessToken())
+                .refreshToken(tokens.getRefreshToken())
                 .build();
     }
 
     @Transactional
-    public AuthResponse authenticate(AuthRequest request) {
-        UserDto user = userService.checkPasswordReturnUser(request.getEmail(), request.getPassword());
+    public AuthResponse authenticate(AuthRequest request, UserAgentInfoDto agentInfo) {
+        try {
+            UserDto user = userService.getUserByEmail(request.getEmail());
 
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
-        }
+            if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+                throw new AccountNotActiveException("Account status is " + user.getAccountStatus());
+            }
 
-        if (mfaService.isMfaEnabledForUser(user.getId())) {
+            checkPassword(request.getPassword(), user.getHashedPassword());
+
+            if (mfaService.isMfaEnabledForUser(user.getId())) {
+                return AuthResponse.builder()
+                        .mfaTempToken(jwtProvider.createMfaTempToken(user))
+                        .mfaRequired(true)
+                        .build();
+            }
+
+            SessionTokens tokens = sessionService.createSession(user, agentInfo);
             return AuthResponse.builder()
-                    .mfaTempToken(tokenService.createMfaTempToken(user))
-                    .mfaRequired(true)
+                    .accessToken(tokens.getAccessToken())
+                    .refreshToken(tokens.getRefreshToken())
                     .build();
-        }
 
-        return AuthResponse.builder()
-                .accessToken(tokenService.createAccessToken(user))
-                .refreshToken(tokenService.createRefreshToken(user))
-                .build();
+        } catch (EntityNotFoundException e) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
     }
 
     @Transactional
-    public AuthResponse verifyOtpIssueTokens(OtpVerifyRequest request) {
-        UUID userId = tokenService.validateMfaTempToken(request.getMfaTempToken());
+    public AuthResponse verifyOtpIssueTokens(OtpVerifyRequest request, UserAgentInfoDto agentInfo) {
+        UUID userId = jwtProvider.validateMfaTempToken(request.getMfaTempToken());
         mfaService.verifyOtpCode(userId, request.getCode());
 
         UserDto user = userService.getUserById(userId);
 
+        SessionTokens tokens = sessionService.createSession(user, agentInfo);
         return AuthResponse.builder()
-                .accessToken(tokenService.createAccessToken(user))
-                .refreshToken(tokenService.createRefreshToken(user))
+                .accessToken(tokens.getAccessToken())
+                .refreshToken(tokens.getRefreshToken())
                 .build();
     }
 
     @Transactional
-    public AuthResponse refresh(String refreshToken) {
-        UserDto user = tokenService.getUserFromTokenWithQuery(refreshToken);
-        tokenService.revokeRefreshToken(refreshToken);
+    public AuthResponse refresh(String refreshToken, UserAgentInfoDto agentInfo) {
+        sessionService.validateRefreshToken(refreshToken);
+        UUID userId = jwtProvider.getUserIdFromToken(refreshToken);
+        UserDto user = userService.getUserById(userId);
 
+        sessionService.revokeRefreshToken(refreshToken);
+
+        SessionTokens tokens = sessionService.createSession(user, agentInfo);
         return AuthResponse.builder()
-                .accessToken(tokenService.createAccessToken(user))
-                .refreshToken(tokenService.createRefreshToken(user))
+                .accessToken(tokens.getAccessToken())
+                .refreshToken(tokens.getRefreshToken())
                 .build();
     }
 
     @Transactional
     public void logout(String refreshToken, String accessToken) {
-        tokenService.revokeRefreshToken(refreshToken);
+        sessionService.revokeRefreshToken(refreshToken);
         if (accessToken != null) {
-            tokenService.blockAccessToken(accessToken);
+            sessionService.blockAccessToken(accessToken);
         }
     }
 
     @Transactional
     public void logoutTokenById(String refreshToken, UUID tokenId) {
-        tokenService.revokeRefreshTokenById(refreshToken, tokenId);
+        sessionService.revokeRefreshTokenById(refreshToken, tokenId);
     }
 
     @Transactional
     public void logoutAll(String refreshToken) {
-        tokenService.revokeAllUserTokens(refreshToken);
+        sessionService.revokeAllUserTokens(refreshToken);
     }
 
     @Transactional(readOnly = true)
     public UserDto authorize(String accessToken) {
-        tokenService.validateAccessToken(accessToken);
-        return tokenService.getUserFromTokenNoQuery(accessToken);
+        sessionService.validateAccessToken(accessToken);
+        return jwtProvider.getUserDtoFromToken(accessToken);
     }
 
     @Transactional(readOnly = true)
-    public List<SessionModel> getActiveRefreshTokens(UUID userId) {
-        return tokenService.getActiveRefreshTokens(userId)
+    public List<RefreshTokenApiModel> getActiveRefreshTokens(UUID userId, String accessToken) {
+        UUID sessionId = jwtProvider.getSessionIdFromToken(accessToken);
+
+        return sessionService.getActiveRefreshTokens(userId)
                 .stream()
                 .map(tokenMapper::toApiModel)
+                .peek(model -> {
+                    if (sessionId.equals(model.getSessionId()))
+                        model.setCurrent(true);
+                })
                 .toList();
     }
 
     @Transactional
     public void changePassword(UUID userId, String oldPassword, String newPassword) {
-        userService.checkPasswordReturnUser(userId, oldPassword);
+        UserDto user = userService.getUserById(userId);
+        checkPassword(oldPassword, user.getHashedPassword());
+
         userService.updateUserPassword(userId, newPassword);
-        tokenService.revokeAllUserTokens(userId);
+        publisher.publishEvent(new AllUserSessionsInvalidatedEvent(user.getId()));
     }
 
     @Transactional
     public void setPassword(UUID userId, String password) {
-        if (userService.isPasswordSetForUser(userId)){
+        if (userService.isPasswordSetForUser(userId)) {
             throw new PermissionDeniedException("Password has already been set");
         }
         userService.updateUserPassword(userId, password);
-        tokenService.revokeAllUserTokens(userId);
+        publisher.publishEvent(new AllUserSessionsInvalidatedEvent(userId));
     }
 
-    @Transactional
-    public UserDto processOAuth2User(OAuth2UserData userData) {
-        try {
-            SocialAccountDto account = socialAccountService.findByProviderAndProviderUserId(
-                    userData.getProvider(),
-                    userData.getProviderUserId());
-            return userService.getUserById(account.getUserId());
-        } catch (EntityNotFoundException e) {
-            return handleNewSocialAccountLink(userData);
+    private void checkPassword(String enteredPassword, String hashedPassword) {
+        if (hashedPassword == null) {
+            throw new PasswordNotSetException();
         }
-    }
-
-    @Transactional
-    protected UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
-        try {
-            UserDto user = userService.getUserByEmail(userData.getEmail());
-            if (!userData.isEmailVerified()) {
-                throw new OAuth2AuthenticationException(
-                        new OAuth2Error("none"),
-                        "We can't merge your account with unverified provider account email. Please use password authentication.");
-            }
-            if (!user.isEmailVerified()) {
-                userService.clearUserPassword(user.getId());
-                tokenService.revokeAllUserTokens(user.getId());
-            }
-            socialAccountService.linkSocialAccount(userData, user.getId());
-            return user;
-        } catch (EntityNotFoundException e1) {
-            UserDto user = userService.createUserFromOAuth2(userData);
-            socialAccountService.linkSocialAccount(userData, user.getId());
-            return user;
+        if (!hasher.verify(enteredPassword, hashedPassword)) {
+            throw new InvalidCredentialsException("Invalid email or password");
         }
     }
 }
