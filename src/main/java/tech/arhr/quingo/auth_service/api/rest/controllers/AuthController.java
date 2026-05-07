@@ -120,7 +120,7 @@ public class AuthController {
     public ResponseEntity<SuccessResponse<List<RefreshTokenApiModel>>> getSessions() {
         JwtAuthenticationToken auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
-        List<RefreshTokenApiModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId());
+        List<RefreshTokenApiModel> tokens = authService.getActiveRefreshTokens(auth.getUser().getId(), auth.getToken());
         return ResponseEntity.ok(
                 SuccessResponse.of(
                         HttpStatus.OK,

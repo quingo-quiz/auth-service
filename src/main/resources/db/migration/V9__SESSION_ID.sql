@@ -1,0 +1,1 @@
+ALTER TABLE tokens ADD COLUMN session_id UUID;

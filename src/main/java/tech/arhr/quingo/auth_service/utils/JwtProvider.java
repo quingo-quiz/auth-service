@@ -177,6 +177,11 @@ public class JwtProvider {
         return UUID.fromString(jwt.getSubject());
     }
 
+    public UUID getSessionIdFromToken(String token){
+        DecodedJWT jwt = decodeToken(token);
+        return UUID.fromString(jwt.getClaim("sid").asString());
+    }
+
     public UserDto getUserDtoFromToken(String token){
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());

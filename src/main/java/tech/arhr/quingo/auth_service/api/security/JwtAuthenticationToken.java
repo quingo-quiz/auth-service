@@ -27,11 +27,12 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
         super.setAuthenticated(true);
     }
 
-    public JwtAuthenticationToken(Object principal, Object credentials, Collection<? extends GrantedAuthority> authorities, UserDto user) {
+    public JwtAuthenticationToken(Object principal, Object credentials, Collection<? extends GrantedAuthority> authorities, UserDto user, String token) {
         super(authorities);
         this.principal = principal;
         this.credentials = credentials;
         this.user = user;
+        this.token = token;
         super.setAuthenticated(true);
     }
 

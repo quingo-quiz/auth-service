@@ -52,6 +52,7 @@ public class SessionService {
             tokenEntity.setDevice(agentInfo.getDevice());
             tokenEntity.setIpAddress(agentInfo.getIpAddress());
         }
+        tokenEntity.setSessionId(sessionId);
 
         tokenRepository.save(tokenEntity);
 

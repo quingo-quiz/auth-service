@@ -147,10 +147,16 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public List<RefreshTokenApiModel> getActiveRefreshTokens(UUID userId) {
+    public List<RefreshTokenApiModel> getActiveRefreshTokens(UUID userId, String accessToken) {
+        UUID sessionId = jwtProvider.getSessionIdFromToken(accessToken);
+
         return sessionService.getActiveRefreshTokens(userId)
                 .stream()
                 .map(tokenMapper::toApiModel)
+                .peek(model -> {
+                    if (sessionId.equals(model.getSessionId()))
+                        model.setCurrent(true);
+                })
                 .toList();
     }
 
