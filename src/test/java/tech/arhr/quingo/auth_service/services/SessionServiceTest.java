@@ -48,21 +48,22 @@ class SessionServiceTest {
     @Mock
     private WhiteListTokenService whiteListTokenService;
 
-    @Mock
     private JwtProvider jwtProvider;
 
-    @InjectMocks
     private SessionService sessionService;
 
     private UserDto defaultUser;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(sessionService, "JWT_SECRET", "test-secret-key");
-        ReflectionTestUtils.setField(sessionService, "ISSUER", "test-issuer");
-        ReflectionTestUtils.setField(sessionService, "ACCESS_EXPIRATION_MINUTES", 15);
-        ReflectionTestUtils.setField(sessionService, "REFRESH_EXPIRATION_DAYS", 7);
-        sessionService.init();
+        jwtProvider = new JwtProvider(timeProvider);
+        ReflectionTestUtils.setField(jwtProvider, "JWT_SECRET", "test-secret-key");
+        ReflectionTestUtils.setField(jwtProvider, "ISSUER", "test-issuer");
+        ReflectionTestUtils.setField(jwtProvider, "ACCESS_EXPIRATION_MINUTES", 15);
+        ReflectionTestUtils.setField(jwtProvider, "REFRESH_EXPIRATION_DAYS", 7);
+        jwtProvider.init();
+
+        sessionService = new SessionService(jpaTokenRepository, whiteListTokenService, hasher, tokenMapper, timeProvider, jwtProvider);
 
         defaultUser = UserDto.builder()
                 .id(UUID.randomUUID())
@@ -72,6 +73,8 @@ class SessionServiceTest {
                 .build();
 
         lenient().when(timeProvider.now()).thenReturn(Instant.now());
+        lenient().when(tokenMapper.toEntity(any(TokenDto.class))).thenAnswer(invocation -> new TokenEntity());
+        lenient().when(hasher.hash(any())).thenReturn("hashed_token");
     }
 
 
@@ -82,8 +85,8 @@ class SessionServiceTest {
                 .roles(null)
                 .build();
 
-        assertThatThrownBy(() -> sessionService.createAccessToken(user))
-                .isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> sessionService.createSession(user, null))
+            .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
@@ -93,14 +96,14 @@ class SessionServiceTest {
                 .roles(List.of())
                 .build();
 
-        assertThatThrownBy(() -> sessionService.createAccessToken(user))
-                .isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> sessionService.createSession(user, null))
+            .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void createAccessToken_ValidUser_TokenContainsCorrectClaims() {
-        TokenDto result = sessionService.createAccessToken(defaultUser);
-        DecodedJWT decoded = sessionService.decodeToken(result.getToken());
+        TokenDto result = sessionService.createSession(defaultUser, null).getAccessToken();
+        DecodedJWT decoded = jwtProvider.decodeToken(result.getToken());
 
         assertThat(decoded.getSubject()).isEqualTo(defaultUser.getId().toString());
         assertThat(decoded.getClaim("typ").asString()).isEqualTo("access");
@@ -111,7 +114,7 @@ class SessionServiceTest {
 
     @Test
     void createAccessToken_ValidUser_RegistersTokenInWhiteList() {
-        sessionService.createAccessToken(defaultUser);
+        sessionService.createSession(defaultUser, null);
 
         verify(whiteListTokenService).registerToken(any(TokenDto.class));
     }
@@ -122,9 +125,8 @@ class SessionServiceTest {
         TokenEntity entity = new TokenEntity();
         when(tokenMapper.toEntity(any(TokenDto.class))).thenReturn(entity);
         when(hasher.hash(any())).thenReturn("hashed_token");
-
-        TokenDto result = sessionService.createRefreshToken(defaultUser);
-        DecodedJWT decoded = sessionService.decodeToken(result.getToken());
+        TokenDto result = sessionService.createSession(defaultUser, null).getRefreshToken();
+        DecodedJWT decoded = jwtProvider.decodeToken(result.getToken());
 
         verify(jpaTokenRepository).save(entity);
         assertThat(entity.getToken()).isEqualTo("hashed_token");
@@ -134,7 +136,7 @@ class SessionServiceTest {
 
     @Test
     void validateAccessToken_ValidAccessToken_NoException() {
-        String token = sessionService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
 
         assertThatNoException().isThrownBy(() -> sessionService.validateAccessToken(token));
@@ -142,7 +144,7 @@ class SessionServiceTest {
 
     @Test
     void validateAccessToken_BlockedToken_ThrowsInvalidTokenException() {
-        String token = sessionService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(true);
 
         assertThatThrownBy(() -> sessionService.validateAccessToken(token))
@@ -158,17 +160,17 @@ class SessionServiceTest {
 
     @Test
     void validateRefreshToken_AccessTokenProvided_ThrowsInvalidTokenException() {
-        String accessToken = sessionService.createAccessToken(defaultUser).getToken();
+        String accessToken = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
 
         assertThatThrownBy(() -> sessionService.validateRefreshToken(accessToken))
-                .isInstanceOf(InvalidTokenException.class);
+            .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void getUserFromTokenNoQuery_ValidAccessToken_ReturnsCorrectUserDto() {
-        String token = sessionService.createAccessToken(defaultUser).getToken();
+        String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
 
-        UserDto result = sessionService.getUserFromTokenNoQuery(token);
+        UserDto result = jwtProvider.getUserDtoFromToken(token);
 
         assertThat(result.getId()).isEqualTo(defaultUser.getId());
         assertThat(result.getUsername()).isEqualTo(defaultUser.getUsername());
@@ -178,28 +180,28 @@ class SessionServiceTest {
 
     @Test
     void decodeToken_MalformedToken_ThrowsInvalidTokenException() {
-        assertThatThrownBy(() -> sessionService.decodeToken("not.a.valid.token"))
-                .isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtProvider.decodeToken("not.a.valid.token"))
+            .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
-        SessionService otherService = new SessionService(jpaTokenRepository, whiteListTokenService, userService, hasher, tokenMapper, timeProvider);
-        ReflectionTestUtils.setField(otherService, "JWT_SECRET", "other-secret");
-        ReflectionTestUtils.setField(otherService, "ISSUER", "test-issuer");
-        ReflectionTestUtils.setField(otherService, "ACCESS_EXPIRATION_MINUTES", 15);
-        ReflectionTestUtils.setField(otherService, "REFRESH_EXPIRATION_DAYS", 7);
-        otherService.init();
+        JwtProvider otherProvider = new JwtProvider(timeProvider);
+        ReflectionTestUtils.setField(otherProvider, "JWT_SECRET", "other-secret");
+        ReflectionTestUtils.setField(otherProvider, "ISSUER", "test-issuer");
+        ReflectionTestUtils.setField(otherProvider, "ACCESS_EXPIRATION_MINUTES", 15);
+        ReflectionTestUtils.setField(otherProvider, "REFRESH_EXPIRATION_DAYS", 7);
+        otherProvider.init();
 
-        String tokenFromOtherService = otherService.createAccessToken(defaultUser).getToken();
+        String tokenFromOtherService = otherProvider.createAccessToken(defaultUser, UUID.randomUUID()).getToken();
 
-        assertThatThrownBy(() -> sessionService.decodeToken(tokenFromOtherService))
-                .isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtProvider.decodeToken(tokenFromOtherService))
+            .isInstanceOf(InvalidTokenException.class);
     }
 
     @Test
     void blockAccessToken_ValidToken_DelegatesToWhiteListBlock() {
-        TokenDto access = sessionService.createAccessToken(defaultUser);
+        TokenDto access = sessionService.createSession(defaultUser, null).getAccessToken();
         when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
 
         sessionService.blockAccessToken(access.getToken());

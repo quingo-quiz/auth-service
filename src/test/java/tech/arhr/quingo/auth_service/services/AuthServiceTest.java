@@ -23,6 +23,7 @@ import tech.arhr.quingo.auth_service.api.rest.models.ChangePasswordRequest;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.JwtProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
+import tech.arhr.quingo.auth_service.dto.auth.SessionTokens;
 
 import java.util.UUID;
 
@@ -71,13 +72,13 @@ class AuthServiceTest {
                 .id(UUID.randomUUID())
                 .build();
 
-        when(sessionService.getUserFromTokenWithQuery(refreshToken)).thenReturn(user);
-        when(sessionService.createAccessToken(user)).thenReturn(TokenDto.builder().build());
-        when(sessionService.createRefreshToken(user)).thenReturn(TokenDto.builder().build());
+                when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
+                when(userService.getUserById(user.getId())).thenReturn(user);
+                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(TokenDto.builder().build(), TokenDto.builder().build()));
 
-        authService.refresh(refreshToken);
+                authService.refresh(refreshToken);
 
-        verify(sessionService).revokeRefreshToken(refreshToken);
+                verify(sessionService).revokeRefreshToken(refreshToken);
     }
 
     @Test
@@ -87,19 +88,19 @@ class AuthServiceTest {
         TokenDto newAccess = TokenDto.builder().id(UUID.randomUUID()).build();
         TokenDto newRefresh = TokenDto.builder().id(UUID.randomUUID()).build();
 
-        when(sessionService.getUserFromTokenWithQuery(refreshToken)).thenReturn(user);
-        when(sessionService.createAccessToken(user)).thenReturn(newAccess);
-        when(sessionService.createRefreshToken(user)).thenReturn(newRefresh);
+                when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
+                when(userService.getUserById(user.getId())).thenReturn(user);
+                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(newAccess, newRefresh));
 
-        AuthResponse result = authService.refresh(refreshToken);
+                AuthResponse result = authService.refresh(refreshToken);
 
-        assertThat(result.getAccessToken()).isEqualTo(newAccess);
-        assertThat(result.getRefreshToken()).isEqualTo(newRefresh);
+                assertThat(result.getAccessToken()).isEqualTo(newAccess);
+                assertThat(result.getRefreshToken()).isEqualTo(newRefresh);
     }
 
     @Test
     void refresh_InvalidToken_ThrowsInvalidTokenException() {
-        when(sessionService.getUserFromTokenWithQuery(any())).thenThrow(new InvalidTokenException());
+        when(sessionService.validateRefreshToken(anyString())).thenThrow(new InvalidTokenException());
 
         assertThatThrownBy(() -> authService.refresh("token"))
                 .isInstanceOf(InvalidTokenException.class);
@@ -109,12 +110,12 @@ class AuthServiceTest {
     void authorize_ValidToken_ReturnsUserDto() {
         String accessToken = "access-token";
         UserDto expected = UserDto.builder().id(UUID.randomUUID()).build();
+                when(sessionService.validateAccessToken(accessToken)).thenReturn(UUID.randomUUID());
+                when(jwtProvider.getUserDtoFromToken(accessToken)).thenReturn(expected);
 
-        when(sessionService.getUserFromTokenNoQuery(accessToken)).thenReturn(expected);
+                UserDto result = authService.authorize(accessToken);
 
-        UserDto result = authService.authorize(accessToken);
-
-        assertThat(result).isEqualTo(expected);
+                assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -150,8 +151,7 @@ class AuthServiceTest {
         assertThat(result.getMfaTempToken()).isEqualTo(mfaToken);
         assertThat(result.getAccessToken()).isNull();
         assertThat(result.getRefreshToken()).isNull();
-        verify(sessionService, never()).createAccessToken(any());
-        verify(sessionService, never()).createRefreshToken(any());
+                verify(sessionService, never()).createSession(any(), any());
     }
 
     @Test
@@ -182,17 +182,15 @@ class AuthServiceTest {
         UserDto user = UserDto.builder().id(userId).build();
         TokenDto access = TokenDto.builder().id(UUID.randomUUID()).token("access").build();
         TokenDto refresh = TokenDto.builder().id(UUID.randomUUID()).token("refresh").build();
+                when(jwtProvider.validateMfaTempToken(request.getMfaTempToken())).thenReturn(userId);
+                when(userService.getUserById(userId)).thenReturn(user);
+                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(access, refresh));
 
-        when(jwtProvider.validateMfaTempToken(request.getMfaTempToken())).thenReturn(userId);
-        when(userService.getUserById(userId)).thenReturn(user);
-        when(sessionService.createAccessToken(user)).thenReturn(access);
-        when(sessionService.createRefreshToken(user)).thenReturn(refresh);
+                AuthResponse response = authService.verifyOtpIssueTokens(request);
 
-        AuthResponse response = authService.verifyOtpIssueTokens(request);
-
-        assertThat(response.getAccessToken()).isEqualTo(access);
-        assertThat(response.getRefreshToken()).isEqualTo(refresh);
-        verify(mfaService).verifyOtpCode(userId, request.getCode());
+                assertThat(response.getAccessToken()).isEqualTo(access);
+                assertThat(response.getRefreshToken()).isEqualTo(refresh);
+                verify(mfaService).verifyOtpCode(userId, request.getCode());
     }
 
     @Test
