@@ -114,11 +114,9 @@ public class SessionService {
         TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
 
         if (!tokenEntity.getUser().getId().equals(userTokenEntity.getUser().getId())) {
-            throw new PermissionDeniedException("You are not allowed to revoke this refresh token");
+            throw new PermissionDeniedException("You are not allowed to revoke this session");
         }
 
-        if (userTokenEntity.getIssuedAt().isAfter(tokenEntity.getIssuedAt()))
-            throw new PermissionDeniedException("You can't revoke sessions older than yours");
         tokenEntity.setRevoked(true);
     }
 

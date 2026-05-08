@@ -73,6 +73,9 @@ model SessionModel {
   @doc("Время истечения срока действия")
   expiresAt: utcDateTime;
 
+  @doc("Является ли сессия текущей")
+  current: boolean;
+
   @doc("Браузер")
   browser?: string;
 
