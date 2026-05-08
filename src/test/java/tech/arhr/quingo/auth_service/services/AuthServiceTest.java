@@ -23,8 +23,14 @@ import tech.arhr.quingo.auth_service.utils.TokenMapper;
 import tech.arhr.quingo.auth_service.dto.auth.SessionTokens;
 import tech.arhr.quingo.auth_service.events.AllUserSessionsInvalidatedEvent;
 import org.mockito.ArgumentCaptor;
+import tech.arhr.quingo.auth_service.dto.auth.RegisterRequest;
+import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PermissionDeniedException;
+import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
+import tech.arhr.quingo.auth_service.api.rest.models.RefreshTokenApiModel;
 
 import java.util.UUID;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -228,5 +234,115 @@ class AuthServiceTest {
                 ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
                 verify(publisher).publishEvent(captor.capture());
                 assertThat(((AllUserSessionsInvalidatedEvent) captor.getValue()).userId()).isEqualTo(userId);
+        }
+
+        @Test
+        void register_Success_CreatesUserAndSessionAndPublishesEvent() {
+                RegisterRequest request = new RegisterRequest();
+                UserDto user = UserDto.builder().id(UUID.randomUUID()).build();
+                TokenDto access = TokenDto.builder().id(UUID.randomUUID()).token("access").build();
+                TokenDto refresh = TokenDto.builder().id(UUID.randomUUID()).token("refresh").build();
+
+                when(userService.createUser(request)).thenReturn(user);
+                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(access, refresh));
+
+                AuthResponse response = authService.register(request, new UserAgentInfoDto());
+
+                assertThat(response.getAccessToken()).isEqualTo(access);
+                assertThat(response.getRefreshToken()).isEqualTo(refresh);
+                ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+                verify(publisher).publishEvent(captor.capture());
+                assertThat(captor.getValue()).isInstanceOf(tech.arhr.quingo.auth_service.events.user.UserRegisteredEvent.class);
+        }
+
+        @Test
+        void authenticate_InvalidPassword_ThrowsInvalidCredentialsException() {
+                AuthRequest request = new AuthRequest();
+                request.setEmail("user@test.com");
+                request.setPassword("wrong");
+
+                UserDto user = UserDto.builder().id(UUID.randomUUID()).accountStatus(AccountStatus.ACTIVE).hashedPassword("hash").build();
+
+                when(userService.getUserByEmail(request.getEmail())).thenReturn(user);
+                when(hasher.verify(anyString(), anyString())).thenReturn(false);
+
+                assertThatThrownBy(() -> authService.authenticate(request, new UserAgentInfoDto()))
+                                .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        void changePassword_InvalidOldPassword_ThrowsInvalidCredentialsException() {
+                UUID userId = UUID.randomUUID();
+                UserDto dto = UserDto.builder().id(userId).hashedPassword("hash").build();
+
+                when(userService.getUserById(userId)).thenReturn(dto);
+                when(hasher.verify(anyString(), anyString())).thenReturn(false);
+
+                assertThatThrownBy(() -> authService.changePassword(userId, "old", "new"))
+                                .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        void setPassword_WhenAlreadySet_ThrowsPermissionDeniedException() {
+                UUID userId = UUID.randomUUID();
+                when(userService.isPasswordSetForUser(userId)).thenReturn(true);
+
+                assertThatThrownBy(() -> authService.setPassword(userId, "pwd"))
+                                .isInstanceOf(PermissionDeniedException.class);
+        }
+
+        @Test
+        void logout_CallsRevokeAndBlock() {
+                String refresh = "refresh";
+                String access = "access";
+
+                authService.logout(refresh, access);
+
+                verify(sessionService).revokeRefreshToken(refresh);
+                verify(sessionService).blockAccessToken(access);
+        }
+
+        @Test
+        void logoutTokenById_CallsRevokeById() {
+                String refresh = "refresh";
+                UUID tokenId = UUID.randomUUID();
+
+                authService.logoutTokenById(refresh, tokenId);
+
+                verify(sessionService).revokeRefreshTokenById(refresh, tokenId);
+        }
+
+        @Test
+        void logoutAll_CallsRevokeAllUserTokens() {
+                String refresh = "refresh";
+
+                authService.logoutAll(refresh);
+
+                verify(sessionService).revokeAllUserTokens(refresh);
+        }
+
+        @Test
+        void getActiveRefreshTokens_MarksCurrentToken() {
+                UUID userId = UUID.randomUUID();
+                UUID currentSessionId = UUID.randomUUID();
+                String accessToken = "access-token";
+
+                TokenDto t1 = TokenDto.builder().id(UUID.randomUUID()).sessionId(currentSessionId).build();
+                TokenDto t2 = TokenDto.builder().id(UUID.randomUUID()).sessionId(UUID.randomUUID()).build();
+
+                RefreshTokenApiModel m1 = new RefreshTokenApiModel();
+                m1.setSessionId(currentSessionId);
+                RefreshTokenApiModel m2 = new RefreshTokenApiModel();
+                m2.setSessionId(t2.getSessionId());
+
+                when(jwtProvider.getSessionIdFromToken(accessToken)).thenReturn(currentSessionId);
+                when(sessionService.getActiveRefreshTokens(userId)).thenReturn(List.of(t1, t2));
+                when(tokenMapper.toApiModel(t1)).thenReturn(m1);
+                when(tokenMapper.toApiModel(t2)).thenReturn(m2);
+
+                List<RefreshTokenApiModel> result = authService.getActiveRefreshTokens(userId, accessToken);
+
+                assertThat(result).hasSize(2);
+                assertThat(result.stream().filter(RefreshTokenApiModel::isCurrent).count()).isEqualTo(1);
         }
 }
