@@ -16,10 +16,10 @@ public class RequestsLogFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        log.info("=== New Request ===");
+       // log.info("=== New Request ===");
 
-        log.info("IP: {}", request.getRemoteAddr());
-        log.info("Endpoint: {}", request.getRequestURI());
+        //log.info("IP: {}", request.getRemoteAddr());
+        //log.info("Endpoint: {}", request.getRequestURI());
 //        request.getHeaderNames().asIterator().forEachRemaining(key -> {
 //            log.info("header: {}", key);
 //        });
@@ -28,6 +28,6 @@ public class RequestsLogFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
 
-        log.info("===================\n");
+     //   log.info("===================\n");
     }
 }

@@ -4,7 +4,6 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -32,9 +31,6 @@ class SessionServiceTest {
 
     @Mock
     private JpaTokenRepository jpaTokenRepository;
-
-    @Mock
-    private UserService userService;
 
     @Mock
     private Hasher hasher;
@@ -77,7 +73,6 @@ class SessionServiceTest {
         lenient().when(hasher.hash(any())).thenReturn("hashed_token");
     }
 
-
     @Test
     void createAccessToken_NullRoles_ThrowsInvalidTokenException() {
         UserDto user = UserDto.builder()
@@ -119,7 +114,6 @@ class SessionServiceTest {
         verify(whiteListTokenService).registerToken(any(TokenDto.class));
     }
 
-
     @Test
     void createRefreshToken_ValidUser_SavesHashedTokenAndReturnsDto() {
         TokenEntity entity = new TokenEntity();
@@ -157,7 +151,6 @@ class SessionServiceTest {
                 .isInstanceOf(InvalidTokenException.class);
     }
 
-
     @Test
     void validateRefreshToken_AccessTokenProvided_ThrowsInvalidTokenException() {
         String accessToken = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
@@ -176,7 +169,6 @@ class SessionServiceTest {
         assertThat(result.getUsername()).isEqualTo(defaultUser.getUsername());
         assertThat(result.getEmail()).isEqualTo(defaultUser.getEmail());
     }
-
 
     @Test
     void decodeToken_MalformedToken_ThrowsInvalidTokenException() {
