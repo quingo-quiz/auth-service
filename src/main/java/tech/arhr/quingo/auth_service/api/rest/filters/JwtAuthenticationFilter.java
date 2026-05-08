@@ -55,13 +55,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 authInManager(request, token);
             } catch (AuthException e) {
-                SecurityContextHolder.clearContext();
-                authenticationEntryPoint.commence(request, response, new BadCredentialsException(e.getMessage(), e));
-                return;
+//                SecurityContextHolder.clearContext();
+//                authenticationEntryPoint.commence(request, response, new BadCredentialsException(e.getMessage(), e));
+//                return;
             } catch (AuthenticationException e) {
-                SecurityContextHolder.clearContext();
-                authenticationEntryPoint.commence(request, response, e);
-                return;
+//                SecurityContextHolder.clearContext();
+//                authenticationEntryPoint.commence(request, response, e);
+//                return;
             }
         }
 

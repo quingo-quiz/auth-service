@@ -59,7 +59,7 @@ public class VerificationService {
         Optional<VerificationTokenRedisModel> opt = redisRepository.get(token, type);
         redisRepository.delete(token, type);
         if (opt.isEmpty())
-            throw new TokenNotFoundException("Verification token not found");
+            throw new TokenNotFoundException("Verification token is invalid");
 
         publisher.publishEvent(new UserEmailVerifiedEvent(opt.get().getUserId()));
     }
@@ -69,7 +69,7 @@ public class VerificationService {
         Optional<VerificationTokenRedisModel> opt = redisRepository.get(token, type);
         redisRepository.delete(token, type);
         if (opt.isEmpty())
-            throw new TokenNotFoundException("Verification token not found");
+            throw new TokenNotFoundException("Verification token is invalid");
 
         publisher.publishEvent(new UserPasswordResetEvent(opt.get().getUserId(), newPassword));
     }
