@@ -13,10 +13,10 @@ import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 import tech.arhr.quingo.auth_service.events.AllUserSessionsInvalidatedEvent;
 import org.mockito.ArgumentCaptor;
-import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.services.SocialAccountService;
 import tech.arhr.quingo.auth_service.services.UserService;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,7 +60,8 @@ class OAuth2IntegrationServiceTest {
         account.setProviderUserId("provider-id");
         UserDto user = UserDto.builder().id(userId).build();
 
-        when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GITHUB, "provider-id")).thenReturn(account);
+        when(socialAccountService.findByProviderAndProviderUserIdOptional(OAuth2Provider.GITHUB, "provider-id"))
+                .thenReturn(Optional.of(account));
         when(userService.getUserById(userId)).thenReturn(user);
 
         UserDto result = integrationService.processOAuth2User(userData);
@@ -86,9 +87,9 @@ class OAuth2IntegrationServiceTest {
                 .emailVerified(false)
                 .build();
 
-        when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-                .thenThrow(new EntityNotFoundException("Social account not found"));
-        when(userService.getUserByEmail("user@test.com")).thenReturn(localUser);
+        when(socialAccountService.findByProviderAndProviderUserIdOptional(OAuth2Provider.GOOGLE, "google-id"))
+                .thenReturn(Optional.empty());
+        when(userService.getUserByEmailOptional("user@test.com")).thenReturn(Optional.of(localUser));
 
         UserDto result = integrationService.processOAuth2User(userData);
 
@@ -112,10 +113,10 @@ class OAuth2IntegrationServiceTest {
 
         UserDto created = UserDto.builder().id(UUID.randomUUID()).build();
 
-        when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-                .thenThrow(new EntityNotFoundException("Social account not found"));
-        when(userService.getUserByEmail("new@test.com"))
-                .thenThrow(new EntityNotFoundException("User not found"));
+        when(socialAccountService.findByProviderAndProviderUserIdOptional(OAuth2Provider.GOOGLE, "google-id"))
+                .thenReturn(Optional.empty());
+        when(userService.getUserByEmailOptional("new@test.com"))
+                .thenReturn(Optional.empty());
         when(userService.createUserFromOAuth2(userData)).thenReturn(created);
 
         UserDto result = integrationService.processOAuth2User(userData);
@@ -136,9 +137,9 @@ class OAuth2IntegrationServiceTest {
 
         UserDto localUser = UserDto.builder().id(UUID.randomUUID()).emailVerified(true).build();
 
-        when(socialAccountService.findByProviderAndProviderUserId(OAuth2Provider.GOOGLE, "google-id"))
-                .thenThrow(new EntityNotFoundException("Social account not found"));
-        when(userService.getUserByEmail("user@test.com")).thenReturn(localUser);
+        when(socialAccountService.findByProviderAndProviderUserIdOptional(OAuth2Provider.GOOGLE, "google-id"))
+                .thenReturn(Optional.empty());
+        when(userService.getUserByEmailOptional("user@test.com")).thenReturn(Optional.of(localUser));
 
         assertThatThrownBy(() -> integrationService.processOAuth2User(userData))
                 .isInstanceOf(OAuth2AuthenticationException.class)
