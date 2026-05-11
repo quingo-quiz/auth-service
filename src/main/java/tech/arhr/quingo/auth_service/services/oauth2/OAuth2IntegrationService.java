@@ -14,6 +14,8 @@ import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundExcept
 import tech.arhr.quingo.auth_service.services.SocialAccountService;
 import tech.arhr.quingo.auth_service.services.UserService;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class OAuth2IntegrationService {
@@ -23,20 +25,25 @@ public class OAuth2IntegrationService {
 
     @Transactional
     public UserDto processOAuth2User(OAuth2UserData userData) {
-        try {
-            SocialAccountDto account = socialAccountService.findByProviderAndProviderUserId(
-                    userData.getProvider(),
-                    userData.getProviderUserId());
+        Optional<SocialAccountDto> opt = socialAccountService.findByProviderAndProviderUserIdOptional(
+                userData.getProvider(),
+                userData.getProviderUserId());
+
+        if (opt.isPresent()) {
+            SocialAccountDto account = opt.get();
             return userService.getUserById(account.getUserId());
-        } catch (EntityNotFoundException e) {
+        } else {
             return handleNewSocialAccountLink(userData);
+
         }
     }
 
     @Transactional
     protected UserDto handleNewSocialAccountLink(OAuth2UserData userData) {
-        try {
-            UserDto user = userService.getUserByEmail(userData.getEmail());
+        Optional<UserDto> opt = userService.getUserByEmailOptional(userData.getEmail());
+
+        if (opt.isPresent()) {
+            UserDto user = opt.get();
             if (!userData.isEmailVerified()) {
                 throw new OAuth2AuthenticationException(
                         new OAuth2Error("none"),
@@ -48,7 +55,7 @@ public class OAuth2IntegrationService {
             }
             socialAccountService.linkSocialAccount(userData, user.getId());
             return user;
-        } catch (EntityNotFoundException e1) {
+        } else {
             UserDto user = userService.createUserFromOAuth2(userData);
             socialAccountService.linkSocialAccount(userData, user.getId());
             return user;

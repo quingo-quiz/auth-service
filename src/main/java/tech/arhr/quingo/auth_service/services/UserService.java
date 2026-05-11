@@ -176,6 +176,16 @@ public class UserService {
         return userMapper.toDto(userEntity);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<UserDto> getUserByEmailOptional(String email) {
+        Optional<UserEntity> opt = userRepository.findByEmail(email);
+        if (opt.isPresent()) {
+            return  Optional.of(userMapper.toDto(opt.get()));
+        } else {
+            return Optional.empty();
+        }
+    }
+
     @Transactional
     public void sendResetPassword(String email) {
         Optional<UserEntity> opt = userRepository.findByEmail(email);

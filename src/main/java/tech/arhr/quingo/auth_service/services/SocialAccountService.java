@@ -12,6 +12,7 @@ import tech.arhr.quingo.auth_service.services.oauth2.OAuth2Provider;
 import tech.arhr.quingo.auth_service.utils.SocialAccountMapper;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,13 @@ public class SocialAccountService {
         if (entities.isEmpty()) {throw new EntityNotFoundException("Social account not found");}
 
         return socialAccountMapper.toDto(entities.getFirst());
+    }
+
+    public Optional<SocialAccountDto> findByProviderAndProviderUserIdOptional(OAuth2Provider provider, String providerUserId){
+        List<SocialAccountEntity> entities = socialAccountRepository.findByProviderEqualsAndProviderUserIdEquals(provider, providerUserId);
+        if (entities.isEmpty()) {return Optional.empty();}
+
+        return Optional.of(socialAccountMapper.toDto(entities.getFirst()));
     }
 
     @Transactional
