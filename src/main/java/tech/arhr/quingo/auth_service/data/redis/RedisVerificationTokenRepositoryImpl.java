@@ -3,7 +3,6 @@ package tech.arhr.quingo.auth_service.data.redis;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 import tech.arhr.quingo.auth_service.data.redis.interfaces.RedisVerificationTokenRepository;
-import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisModel;
 import tech.arhr.quingo.auth_service.enums.VerificationTokenType;
 

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/.well-known")
 @RequiredArgsConstructor
-public class JwksController {
+public class WellKnownController {
 
     @Value("${spring.jwt.public-key}")
     private String publicKeyPem;

@@ -16,10 +16,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisModel;
 
 import java.time.Duration;
+import java.time.Instant;
 
 @Configuration
 @EnableCaching
@@ -56,9 +56,10 @@ public class RedisConfiguration {
         return new GenericJackson2JsonRedisSerializer(objectMapper);
     }
 
+
     @Bean
-    public RedisTemplate<String, TokenRedisModel> tokenRedisTemplate() {
-        RedisTemplate<String, TokenRedisModel> template = new RedisTemplate<>();
+    public RedisTemplate<String, Instant> revokationTimeRedisTemplate() {
+        RedisTemplate<String, Instant> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
         template.setKeySerializer(new StringRedisSerializer());
 

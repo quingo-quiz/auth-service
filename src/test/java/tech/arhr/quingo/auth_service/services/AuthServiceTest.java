@@ -115,7 +115,7 @@ class AuthServiceTest {
         void authorize_ValidToken_ReturnsUserDto() {
                 String accessToken = "access-token";
                 UserDto expected = UserDto.builder().id(UUID.randomUUID()).build();
-                when(sessionService.validateAccessToken(accessToken)).thenReturn(UUID.randomUUID());
+                when(sessionService.validateAccessToken(accessToken)).thenReturn(TokenDto.builder().build());
                 when(jwtProvider.getUserDtoFromToken(accessToken)).thenReturn(expected);
 
                 UserDto result = authService.authorize(accessToken);

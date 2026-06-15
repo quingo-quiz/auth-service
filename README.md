@@ -98,8 +98,8 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
 # JWT
 JWT_ISSUER=localhost
-JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY----- ... -----END PRIVATE KEY-----"
-JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----"
+JWT_PRIVATE_KEY= ...
+JWT_PUBLIC_KEY= ...
 JWT_ACCESS_MINUTES=15
 JWT_REFRESH_DAYS=30
 
@@ -121,5 +121,4 @@ ENCRYPTION_KEY=461ffkroeprogtla83asbr230dsd2lvw
 
 ## 🔮 Планы по развитию
 
-*   [x] **Переход на ES256**: Использование асимметричного шифрования для подписи JWT.
 *   [ ] **Расширение API**: увеличение числа доступных методов для гибкого взаимодействия.

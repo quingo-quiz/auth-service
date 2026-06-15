@@ -29,10 +29,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SessionServiceTest {
 
-    private static final String TEST_PRIVATE_KEY = "-----BEGIN PRIVATE KEY----- MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdcksMsCpIFzeHpFPxIGa7SOpAvFRXgCj72QBc5EOQWhRANCAASNBDZrkVsQu9Sr5mM72tt1vO4jhjG1a5y1NvNmtjbnGncZia9hcd0mbEpZKfST6pteOw3bK0lvTkNIoPpsga7f -----END PRIVATE KEY-----";
-    private static final String TEST_PUBLIC_KEY = "-----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjQQ2a5FbELvUq+ZjO9rbdbzuI4YxtWuctTbzZrY25xp3GYmvYXHdJmxKWSn0k+qbXjsN2ytJb05DSKD6bIGu3w== -----END PUBLIC KEY-----";
-    private static final String OTHER_PRIVATE_KEY = "-----BEGIN PRIVATE KEY----- MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg6Q/nuzqERRks5YlahTYUAK1qa3x7fulzeWmcEosQ0+KhRANCAASR8AOMy285a5L2AyGFTbgU0b9nzG5FxQybNh0DQEfTfz6unLoMS0QzvvmDQ4nOpsfB8FP7NGg5IYg3wppCAMbK -----END PRIVATE KEY-----";
-    private static final String OTHER_PUBLIC_KEY = "-----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkfADjMtvOWuS9gMhhU24FNG/Z8xuRcUMmzYdA0BH038+rpy6DEtEM775g0OJzqbHwfBT+zRoOSGIN8KaQgDGyg== -----END PUBLIC KEY-----";
+    private static final String TEST_PRIVATE_KEY = "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdcksMsCpIFzeHpFPxIGa7SOpAvFRXgCj72QBc5EOQWhRANCAASNBDZrkVsQu9Sr5mM72tt1vO4jhjG1a5y1NvNmtjbnGncZia9hcd0mbEpZKfST6pteOw3bK0lvTkNIoPpsga7f";
+    private static final String TEST_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjQQ2a5FbELvUq+ZjO9rbdbzuI4YxtWuctTbzZrY25xp3GYmvYXHdJmxKWSn0k+qbXjsN2ytJb05DSKD6bIGu3w==";
+    private static final String OTHER_PRIVATE_KEY = "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg6Q/nuzqERRks5YlahTYUAK1qa3x7fulzeWmcEosQ0+KhRANCAASR8AOMy285a5L2AyGFTbgU0b9nzG5FxQybNh0DQEfTfz6unLoMS0QzvvmDQ4nOpsfB8FP7NGg5IYg3wppCAMbK";
+    private static final String OTHER_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkfADjMtvOWuS9gMhhU24FNG/Z8xuRcUMmzYdA0BH038+rpy6DEtEM775g0OJzqbHwfBT+zRoOSGIN8KaQgDGyg==";
 
     @Mock
     private JpaTokenRepository jpaTokenRepository;
@@ -47,7 +47,7 @@ class SessionServiceTest {
     private TimeProvider timeProvider;
 
     @Mock
-    private WhiteListTokenService whiteListTokenService;
+    private AccessTokensRevocationService revocationService;
 
     private JwtProvider jwtProvider;
 
@@ -65,7 +65,7 @@ class SessionServiceTest {
         ReflectionTestUtils.setField(jwtProvider, "REFRESH_EXPIRATION_DAYS", 7);
         jwtProvider.init();
 
-        sessionService = new SessionService(jpaTokenRepository, whiteListTokenService, hasher, tokenMapper, timeProvider, jwtProvider);
+        sessionService = new SessionService(jpaTokenRepository, revocationService, hasher, tokenMapper, timeProvider, jwtProvider);
 
         defaultUser = UserDto.builder()
                 .id(UUID.randomUUID())
@@ -114,13 +114,6 @@ class SessionServiceTest {
     }
 
     @Test
-    void createAccessToken_ValidUser_RegistersTokenInWhiteList() {
-        sessionService.createSession(defaultUser, null);
-
-        verify(whiteListTokenService).registerToken(any(TokenDto.class));
-    }
-
-    @Test
     void createRefreshToken_ValidUser_SavesHashedTokenAndReturnsDto() {
         TokenEntity entity = new TokenEntity();
         when(tokenMapper.toEntity(any(TokenDto.class))).thenReturn(entity);
@@ -137,7 +130,7 @@ class SessionServiceTest {
     @Test
     void validateAccessToken_ValidAccessToken_NoException() {
         String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
+        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(false);
 
         assertThatNoException().isThrownBy(() -> sessionService.validateAccessToken(token));
     }
@@ -145,7 +138,7 @@ class SessionServiceTest {
     @Test
     void validateAccessToken_BlockedToken_ThrowsInvalidTokenException() {
         String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(true);
+        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(true);
 
         assertThatThrownBy(() -> sessionService.validateAccessToken(token))
                 .isInstanceOf(InvalidTokenException.class);
@@ -199,17 +192,18 @@ class SessionServiceTest {
     }
 
     @Test
-    void blockAccessToken_ValidToken_DelegatesToWhiteListBlock() {
+    void blockAccessToken_ValidToken_InvalidatesSessionTokens() {
         TokenDto access = sessionService.createSession(defaultUser, null).getAccessToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
+        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(false);
 
         sessionService.blockAccessToken(access.getToken());
 
-        verify(whiteListTokenService).blockToken(access.getId());
+        UUID sessionId = jwtProvider.validateAccessToken(access.getToken()).getSessionId();
+        verify(revocationService).invalidateSessionTokens(sessionId);
     }
 
     @Test
-    void revokeAllUserTokens_ByUserId_MarksAllAsRevokedAndBlocksWhitelist() {
+    void revokeAllUserTokens_ByUserId_MarksAllAsRevokedAndInvalidatesAccessTokens() {
         UUID userId = UUID.randomUUID();
         TokenEntity first = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
         TokenEntity second = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
@@ -220,6 +214,6 @@ class SessionServiceTest {
 
         assertThat(first.isRevoked()).isTrue();
         assertThat(second.isRevoked()).isTrue();
-        verify(whiteListTokenService).blockAllUserTokens(userId);
+        verify(revocationService).invalidateAllUserTokens(userId);
     }
 }

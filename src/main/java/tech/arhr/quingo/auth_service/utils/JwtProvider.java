@@ -182,16 +182,31 @@ public class JwtProvider {
 
     /**
      * @param accessToken accessToken
-     * @return Token ID
+     * @return TokenDto
      */
-    public UUID validateAccessToken(String accessToken) {
+    public TokenDto validateAccessToken(String accessToken) {
         DecodedJWT jwt = decodeToken(accessToken);
         String typ = jwt.getClaim("typ").asString();
-        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
-
         if (!typ.equals("access"))
             throw new InvalidTokenException("Token is not access");
-        return tokenId;
+
+        TokenDto dto = new TokenDto();
+        UserDto userDto = new UserDto();
+
+        userDto.setUsername(jwt.getClaim("username").asString());
+        userDto.setEmail(jwt.getClaim("email").asString());
+        userDto.setEmailVerified(jwt.getClaim("emailVerified").asBoolean());
+        userDto.setRoles(jwt.getClaim("roles").asList(UserRole.class));
+        userDto.setId(UUID.fromString(jwt.getClaim("sub").asString()));
+
+        dto.setToken(accessToken);
+        dto.setId(UUID.fromString(jwt.getClaim("jti").asString()));
+        dto.setSessionId(UUID.fromString(jwt.getClaim("sid").asString()));
+        dto.setIssuedAt(jwt.getIssuedAt().toInstant());
+        dto.setExpiresAt(jwt.getExpiresAt().toInstant());
+        dto.setUserDto(userDto);
+
+        return dto;
     }
 
     /**

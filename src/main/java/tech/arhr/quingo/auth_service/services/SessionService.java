@@ -28,7 +28,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SessionService {
     private final JpaTokenRepository tokenRepository;
-    private final WhiteListTokenService whiteListTokenService;
+    private final AccessTokensRevocationService revocationService;
     private final Hasher hasher;
     private final TokenMapper tokenMapper;
     private final TimeProvider timeProvider;
@@ -39,8 +39,6 @@ public class SessionService {
         UUID sessionId = UUID.randomUUID();
         TokenDto refresh = jwtProvider.createRefreshToken(user, sessionId, agentInfo);
         TokenDto access = jwtProvider.createAccessToken(user, sessionId);
-
-        whiteListTokenService.registerToken(access);
 
         TokenEntity tokenEntity = tokenMapper.toEntity(refresh);
         tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
@@ -66,13 +64,13 @@ public class SessionService {
      * @param accessToken accessToken
      * @return Token ID
      */
-    public UUID validateAccessToken(String accessToken) {
-        UUID tokenId = jwtProvider.validateAccessToken(accessToken);
+    public TokenDto validateAccessToken(String accessToken) {
+        TokenDto dto = jwtProvider.validateAccessToken(accessToken);
 
-        if (whiteListTokenService.isBlocked(tokenId))
+        if (revocationService.isAccessTokenBlocked(dto.getUserDto().getId(), dto.getSessionId(), dto.getIssuedAt()))
             throw new InvalidTokenException("Token is blocked");
 
-        return tokenId;
+        return dto;
     }
 
     /**
@@ -121,8 +119,8 @@ public class SessionService {
     }
 
     public void blockAccessToken(String token) {
-        UUID tokenId = validateAccessToken(token);
-        whiteListTokenService.blockToken(tokenId);
+        TokenDto dto = validateAccessToken(token);
+        revocationService.invalidateSessionTokens(dto.getSessionId());
     }
 
     @Transactional
@@ -136,7 +134,7 @@ public class SessionService {
     public void revokeAllUserTokens(UUID userId) {
         List<TokenEntity> entities = tokenRepository.findAllByUserId(userId);
         entities.forEach(tokenEntity -> tokenEntity.setRevoked(true));
-        whiteListTokenService.blockAllUserTokens(userId);
+        revocationService.invalidateAllUserTokens(userId);
     }
 
     @Transactional(readOnly = true)
@@ -155,6 +153,6 @@ public class SessionService {
 
     @EventListener(UserRolesChangedEvent.class)
     public void onRevokeAllUserAccessTokens(UserRolesChangedEvent event) {
-        whiteListTokenService.blockAllUserTokens(event.userId());
+        revocationService.invalidateAllUserTokens(event.userId());
     }
 }
