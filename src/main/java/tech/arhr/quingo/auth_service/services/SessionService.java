@@ -135,7 +135,7 @@ public class SessionService {
     }
 
     public void blockAccessToken(String token) {
-        TokenDto dto = validateAccessToken(token);
+        TokenDto dto = jwtProvider.validateAccessToken(token);
         revocationService.invalidateSessionTokens(dto.getSessionId());
     }
 

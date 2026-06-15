@@ -196,7 +196,6 @@ class SessionServiceTest {
     @Test
     void blockAccessToken_ValidToken_InvalidatesSessionTokens() {
         TokenDto access = sessionService.createSession(defaultUser, null).getAccessToken();
-        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(false);
 
         sessionService.blockAccessToken(access.getToken());
 
