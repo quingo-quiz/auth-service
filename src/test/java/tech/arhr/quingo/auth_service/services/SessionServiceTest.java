@@ -29,6 +29,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SessionServiceTest {
 
+    private static final String TEST_PRIVATE_KEY = "-----BEGIN PRIVATE KEY----- MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdcksMsCpIFzeHpFPxIGa7SOpAvFRXgCj72QBc5EOQWhRANCAASNBDZrkVsQu9Sr5mM72tt1vO4jhjG1a5y1NvNmtjbnGncZia9hcd0mbEpZKfST6pteOw3bK0lvTkNIoPpsga7f -----END PRIVATE KEY-----";
+    private static final String TEST_PUBLIC_KEY = "-----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjQQ2a5FbELvUq+ZjO9rbdbzuI4YxtWuctTbzZrY25xp3GYmvYXHdJmxKWSn0k+qbXjsN2ytJb05DSKD6bIGu3w== -----END PUBLIC KEY-----";
+    private static final String OTHER_PRIVATE_KEY = "-----BEGIN PRIVATE KEY----- MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg6Q/nuzqERRks5YlahTYUAK1qa3x7fulzeWmcEosQ0+KhRANCAASR8AOMy285a5L2AyGFTbgU0b9nzG5FxQybNh0DQEfTfz6unLoMS0QzvvmDQ4nOpsfB8FP7NGg5IYg3wppCAMbK -----END PRIVATE KEY-----";
+    private static final String OTHER_PUBLIC_KEY = "-----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkfADjMtvOWuS9gMhhU24FNG/Z8xuRcUMmzYdA0BH038+rpy6DEtEM775g0OJzqbHwfBT+zRoOSGIN8KaQgDGyg== -----END PUBLIC KEY-----";
+
     @Mock
     private JpaTokenRepository jpaTokenRepository;
 
@@ -53,7 +58,8 @@ class SessionServiceTest {
     @BeforeEach
     void setUp() {
         jwtProvider = new JwtProvider(timeProvider);
-        ReflectionTestUtils.setField(jwtProvider, "JWT_SECRET", "test-secret-key");
+        ReflectionTestUtils.setField(jwtProvider, "privateKeyPem", TEST_PRIVATE_KEY);
+        ReflectionTestUtils.setField(jwtProvider, "publicKeyPem", TEST_PUBLIC_KEY);
         ReflectionTestUtils.setField(jwtProvider, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(jwtProvider, "ACCESS_EXPIRATION_MINUTES", 15);
         ReflectionTestUtils.setField(jwtProvider, "REFRESH_EXPIRATION_DAYS", 7);
@@ -179,7 +185,8 @@ class SessionServiceTest {
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
         JwtProvider otherProvider = new JwtProvider(timeProvider);
-        ReflectionTestUtils.setField(otherProvider, "JWT_SECRET", "other-secret");
+        ReflectionTestUtils.setField(otherProvider, "privateKeyPem", OTHER_PRIVATE_KEY);
+        ReflectionTestUtils.setField(otherProvider, "publicKeyPem", OTHER_PUBLIC_KEY);
         ReflectionTestUtils.setField(otherProvider, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherProvider, "ACCESS_EXPIRATION_MINUTES", 15);
         ReflectionTestUtils.setField(otherProvider, "REFRESH_EXPIRATION_DAYS", 7);

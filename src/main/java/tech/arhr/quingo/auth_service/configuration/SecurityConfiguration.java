@@ -62,7 +62,8 @@ public class SecurityConfiguration {
                                         "/oauth2/authorization/**",
                                         "/mfa/otp/verify",
                                         "/user/password/send-reset",
-                                        "/user/password/reset"
+                                        "/user/password/reset",
+                                        "/.well-known/**"
                                 ).permitAll()
                                 .requestMatchers(HttpMethod.PATCH,
                                         "/user/email/verify").permitAll()

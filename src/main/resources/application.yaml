@@ -21,7 +21,8 @@ spring:
     hibernate:
       ddl-auto: validate
   jwt:
-    secret: ${JWT_SECRET}
+    private-key: ${JWT_PRIVATE_KEY}
+    public-key: ${JWT_PUBLIC_KEY}
     issuer: ${JWT_ISSUER}
     expiration:
       access-minutes: ${JWT_ACCESS_MINUTES}
