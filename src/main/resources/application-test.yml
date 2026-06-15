@@ -14,7 +14,8 @@ spring:
       ddl-auto: create-drop
     show-sql: false
   jwt:
-    secret: test-secret-jwt-string
+    private-key: "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdcksMsCpIFzeHpFPxIGa7SOpAvFRXgCj72QBc5EOQWhRANCAASNBDZrkVsQu9Sr5mM72tt1vO4jhjG1a5y1NvNmtjbnGncZia9hcd0mbEpZKfST6pteOw3bK0lvTkNIoPpsga7f"
+    public-key: "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjQQ2a5FbELvUq+ZjO9rbdbzuI4YxtWuctTbzZrY25xp3GYmvYXHdJmxKWSn0k+qbXjsN2ytJb05DSKD6bIGu3w=="
     expiration:
       access-minutes: 15
       refresh-days: 30

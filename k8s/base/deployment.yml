@@ -92,11 +92,16 @@ spec:
                   key: KAFKA_BOOTSTRAP_SERVERS
 
             # JWT
-            - name: JWT_SECRET
+            - name: JWT_PUBLIC_KEY
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secret
-                  key: JWT_SECRET
+                  key: JWT_PUBLIC_KEY
+            - name: JWT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secret
+                  key: JWT_PRIVATE_KEY
             - name: JWT_ISSUER
               valueFrom:
                 secretKeyRef:

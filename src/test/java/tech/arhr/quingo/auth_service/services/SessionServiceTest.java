@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -20,6 +21,7 @@ import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -28,6 +30,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SessionServiceTest {
+
+    private static final String TEST_PRIVATE_KEY = "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgJdcksMsCpIFzeHpFPxIGa7SOpAvFRXgCj72QBc5EOQWhRANCAASNBDZrkVsQu9Sr5mM72tt1vO4jhjG1a5y1NvNmtjbnGncZia9hcd0mbEpZKfST6pteOw3bK0lvTkNIoPpsga7f";
+    private static final String TEST_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjQQ2a5FbELvUq+ZjO9rbdbzuI4YxtWuctTbzZrY25xp3GYmvYXHdJmxKWSn0k+qbXjsN2ytJb05DSKD6bIGu3w==";
+    private static final String OTHER_PRIVATE_KEY = "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg6Q/nuzqERRks5YlahTYUAK1qa3x7fulzeWmcEosQ0+KhRANCAASR8AOMy285a5L2AyGFTbgU0b9nzG5FxQybNh0DQEfTfz6unLoMS0QzvvmDQ4nOpsfB8FP7NGg5IYg3wppCAMbK";
+    private static final String OTHER_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkfADjMtvOWuS9gMhhU24FNG/Z8xuRcUMmzYdA0BH038+rpy6DEtEM775g0OJzqbHwfBT+zRoOSGIN8KaQgDGyg==";
 
     @Mock
     private JpaTokenRepository jpaTokenRepository;
@@ -42,7 +49,7 @@ class SessionServiceTest {
     private TimeProvider timeProvider;
 
     @Mock
-    private WhiteListTokenService whiteListTokenService;
+    private AccessTokensRevocationService revocationService;
 
     private JwtProvider jwtProvider;
 
@@ -53,13 +60,14 @@ class SessionServiceTest {
     @BeforeEach
     void setUp() {
         jwtProvider = new JwtProvider(timeProvider);
-        ReflectionTestUtils.setField(jwtProvider, "JWT_SECRET", "test-secret-key");
+        ReflectionTestUtils.setField(jwtProvider, "privateKeyPem", TEST_PRIVATE_KEY);
+        ReflectionTestUtils.setField(jwtProvider, "publicKeyPem", TEST_PUBLIC_KEY);
         ReflectionTestUtils.setField(jwtProvider, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(jwtProvider, "ACCESS_EXPIRATION_MINUTES", 15);
         ReflectionTestUtils.setField(jwtProvider, "REFRESH_EXPIRATION_DAYS", 7);
         jwtProvider.init();
 
-        sessionService = new SessionService(jpaTokenRepository, whiteListTokenService, hasher, tokenMapper, timeProvider, jwtProvider);
+        sessionService = new SessionService(jpaTokenRepository, revocationService, hasher, tokenMapper, timeProvider, jwtProvider);
 
         defaultUser = UserDto.builder()
                 .id(UUID.randomUUID())
@@ -108,13 +116,6 @@ class SessionServiceTest {
     }
 
     @Test
-    void createAccessToken_ValidUser_RegistersTokenInWhiteList() {
-        sessionService.createSession(defaultUser, null);
-
-        verify(whiteListTokenService).registerToken(any(TokenDto.class));
-    }
-
-    @Test
     void createRefreshToken_ValidUser_SavesHashedTokenAndReturnsDto() {
         TokenEntity entity = new TokenEntity();
         when(tokenMapper.toEntity(any(TokenDto.class))).thenReturn(entity);
@@ -131,7 +132,7 @@ class SessionServiceTest {
     @Test
     void validateAccessToken_ValidAccessToken_NoException() {
         String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
+        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(false);
 
         assertThatNoException().isThrownBy(() -> sessionService.validateAccessToken(token));
     }
@@ -139,7 +140,7 @@ class SessionServiceTest {
     @Test
     void validateAccessToken_BlockedToken_ThrowsInvalidTokenException() {
         String token = sessionService.createSession(defaultUser, null).getAccessToken().getToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(true);
+        when(revocationService.isAccessTokenBlocked(any(UUID.class), any(UUID.class), any(Instant.class))).thenReturn(true);
 
         assertThatThrownBy(() -> sessionService.validateAccessToken(token))
                 .isInstanceOf(InvalidTokenException.class);
@@ -179,7 +180,8 @@ class SessionServiceTest {
     @Test
     void decodeToken_WrongSecret_ThrowsInvalidTokenException() {
         JwtProvider otherProvider = new JwtProvider(timeProvider);
-        ReflectionTestUtils.setField(otherProvider, "JWT_SECRET", "other-secret");
+        ReflectionTestUtils.setField(otherProvider, "privateKeyPem", OTHER_PRIVATE_KEY);
+        ReflectionTestUtils.setField(otherProvider, "publicKeyPem", OTHER_PUBLIC_KEY);
         ReflectionTestUtils.setField(otherProvider, "ISSUER", "test-issuer");
         ReflectionTestUtils.setField(otherProvider, "ACCESS_EXPIRATION_MINUTES", 15);
         ReflectionTestUtils.setField(otherProvider, "REFRESH_EXPIRATION_DAYS", 7);
@@ -192,17 +194,70 @@ class SessionServiceTest {
     }
 
     @Test
-    void blockAccessToken_ValidToken_DelegatesToWhiteListBlock() {
+    void blockAccessToken_ValidToken_InvalidatesSessionTokens() {
         TokenDto access = sessionService.createSession(defaultUser, null).getAccessToken();
-        when(whiteListTokenService.isBlocked(any(UUID.class))).thenReturn(false);
 
         sessionService.blockAccessToken(access.getToken());
 
-        verify(whiteListTokenService).blockToken(access.getId());
+        UUID sessionId = jwtProvider.validateAccessToken(access.getToken()).getSessionId();
+        verify(revocationService).invalidateSessionTokens(sessionId);
     }
 
     @Test
-    void revokeAllUserTokens_ByUserId_MarksAllAsRevokedAndBlocksWhitelist() {
+    void revokeRefreshToken_ValidToken_InvalidatesSessionAccessTokens() {
+        TokenDto refresh = sessionService.createSession(defaultUser, null).getRefreshToken();
+        UUID sessionId = jwtProvider.getSessionIdFromToken(refresh.getToken());
+
+        TokenEntity entity = TokenEntity.builder()
+                .id(refresh.getId())
+                .sessionId(sessionId)
+                .revoked(false)
+                .token("hashed_token")
+                .build();
+
+        when(jpaTokenRepository.findById(refresh.getId())).thenReturn(Optional.of(entity));
+        when(hasher.verify(refresh.getToken(), entity.getToken())).thenReturn(true);
+
+        sessionService.revokeRefreshToken(refresh.getToken());
+
+        assertThat(entity.isRevoked()).isTrue();
+        verify(revocationService).invalidateSessionTokens(sessionId);
+    }
+
+    @Test
+    void revokeRefreshTokenById_ValidRequest_InvalidatesTargetSessionAccessTokens() {
+        TokenDto refresh = sessionService.createSession(defaultUser, null).getRefreshToken();
+        UUID sessionId = jwtProvider.getSessionIdFromToken(refresh.getToken());
+        UserEntity user = UserEntity.builder().id(defaultUser.getId()).build();
+
+        TokenEntity userTokenEntity = TokenEntity.builder()
+                .id(refresh.getId())
+                .sessionId(sessionId)
+                .revoked(false)
+                .token("hashed_token")
+                .user(user)
+                .build();
+
+        UUID targetSessionId = UUID.randomUUID();
+        TokenEntity targetEntity = TokenEntity.builder()
+                .id(UUID.randomUUID())
+                .sessionId(targetSessionId)
+                .revoked(false)
+                .user(user)
+                .build();
+
+        when(jpaTokenRepository.findById(refresh.getId())).thenReturn(Optional.of(userTokenEntity));
+        when(jpaTokenRepository.findById(targetEntity.getId())).thenReturn(Optional.of(targetEntity));
+        when(hasher.verify(refresh.getToken(), userTokenEntity.getToken())).thenReturn(true);
+
+        sessionService.revokeRefreshTokenById(refresh.getToken(), targetEntity.getId());
+
+        assertThat(targetEntity.isRevoked()).isTrue();
+        verify(revocationService).invalidateSessionTokens(targetSessionId);
+    }
+
+    @Test
+    void revokeAllUserTokens_ByUserId_MarksAllAsRevokedAndInvalidatesAccessTokens() {
         UUID userId = UUID.randomUUID();
         TokenEntity first = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
         TokenEntity second = TokenEntity.builder().id(UUID.randomUUID()).revoked(false).build();
@@ -213,6 +268,6 @@ class SessionServiceTest {
 
         assertThat(first.isRevoked()).isTrue();
         assertThat(second.isRevoked()).isTrue();
-        verify(whiteListTokenService).blockAllUserTokens(userId);
+        verify(revocationService).invalidateAllUserTokens(userId);
     }
 }

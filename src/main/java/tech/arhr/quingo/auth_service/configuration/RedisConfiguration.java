@@ -14,12 +14,13 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tech.arhr.quingo.auth_service.data.redis.models.TokenRedisModel;
 import tech.arhr.quingo.auth_service.data.redis.models.VerificationTokenRedisModel;
 
 import java.time.Duration;
+import java.time.Instant;
 
 @Configuration
 @EnableCaching
@@ -56,13 +57,20 @@ public class RedisConfiguration {
         return new GenericJackson2JsonRedisSerializer(objectMapper);
     }
 
+
     @Bean
-    public RedisTemplate<String, TokenRedisModel> tokenRedisTemplate() {
-        RedisTemplate<String, TokenRedisModel> template = new RedisTemplate<>();
+    public RedisTemplate<String, Instant> revocationTimeRedisTemplate() {
+        RedisTemplate<String, Instant> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory());
         template.setKeySerializer(new StringRedisSerializer());
 
-        GenericJackson2JsonRedisSerializer serializer = createJsonSerializer();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        Jackson2JsonRedisSerializer<Instant> serializer = new Jackson2JsonRedisSerializer<>(Instant.class);
+        serializer.setObjectMapper(objectMapper);
+
         template.setValueSerializer(serializer);
         template.setHashValueSerializer(serializer);
 

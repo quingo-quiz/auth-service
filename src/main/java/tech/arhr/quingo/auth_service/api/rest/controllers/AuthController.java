@@ -65,7 +65,7 @@ public class AuthController {
 
         AuthStrategy strategy = AuthStrategy.fromString(strategyHeader);
         String refreshToken = resolveRefreshToken(refreshTokenFromCookie, refreshTokenRequest, strategy);
-        AuthResponse authResponse = authService.refresh(refreshToken, getClientInfoFromContext());
+        AuthResponse authResponse = authService.refresh(refreshToken);
 
         return createSuccessAuthResponse(authResponse, strategy);
     }

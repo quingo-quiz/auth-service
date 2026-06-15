@@ -13,17 +13,27 @@ import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserAgentInfoDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
 import tech.arhr.quingo.auth_service.enums.UserRole;
+import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidTokenException;
 
+import java.security.KeyFactory;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class JwtProvider {
-    @Value("${spring.jwt.secret}")
-    private String JWT_SECRET;
+    @Value("${spring.jwt.private-key}")
+    private String privateKeyPem;
+
+    @Value("${spring.jwt.public-key}")
+    private String publicKeyPem;
 
     @Value("${spring.application.domain}")
     private String ISSUER;
@@ -42,11 +52,39 @@ public class JwtProvider {
 
     @PostConstruct
     public void init() {
-        ALGORITHM = Algorithm.HMAC256(JWT_SECRET);
+        try {
+            ECPublicKey publicKey = parsePublicKey(publicKeyPem);
+            ECPrivateKey privateKey = parsePrivateKey(privateKeyPem);
 
-        VERIFIER = JWT.require(ALGORITHM)
-                .withIssuer(ISSUER)
-                .build();
+            ALGORITHM = Algorithm.ECDSA256(publicKey, privateKey);
+
+            VERIFIER = JWT.require(ALGORITHM)
+                    .withIssuer(ISSUER)
+                    .build();
+        } catch (Exception e) {
+            throw new QuingoAppException("Failed to initialize JwtProvider: " + e.getMessage());
+        }
+    }
+
+    private ECPublicKey parsePublicKey(String pem) throws Exception {
+        String cleaned = stripPemHeaders(pem, "PUBLIC KEY");
+        byte[] decoded = Base64.getDecoder().decode(cleaned);
+        KeyFactory kf = KeyFactory.getInstance("EC");
+        return (ECPublicKey) kf.generatePublic(new X509EncodedKeySpec(decoded));
+    }
+
+    private ECPrivateKey parsePrivateKey(String pem) throws Exception {
+        String cleaned = stripPemHeaders(pem, "PRIVATE KEY");
+        byte[] decoded = Base64.getDecoder().decode(cleaned);
+        KeyFactory kf = KeyFactory.getInstance("EC");
+        return (ECPrivateKey) kf.generatePrivate(new PKCS8EncodedKeySpec(decoded));
+    }
+
+    private String stripPemHeaders(String pem, String label) {
+        return pem
+                .replace("-----BEGIN " + label + "-----", "")
+                .replace("-----END " + label + "-----", "")
+                .replaceAll("\\s", "");
     }
 
     public TokenDto createAccessToken(UserDto user, UUID sessionId) {
@@ -143,22 +181,35 @@ public class JwtProvider {
 
 
     /**
-     *
      * @param accessToken accessToken
-     * @return Token ID
+     * @return TokenDto
      */
-    public UUID validateAccessToken(String accessToken) {
+    public TokenDto validateAccessToken(String accessToken) {
         DecodedJWT jwt = decodeToken(accessToken);
         String typ = jwt.getClaim("typ").asString();
-        UUID tokenId = UUID.fromString(jwt.getClaim("jti").asString());
-
         if (!typ.equals("access"))
             throw new InvalidTokenException("Token is not access");
-        return tokenId;
+
+        TokenDto dto = new TokenDto();
+        UserDto userDto = new UserDto();
+
+        userDto.setUsername(jwt.getClaim("username").asString());
+        userDto.setEmail(jwt.getClaim("email").asString());
+        userDto.setEmailVerified(jwt.getClaim("emailVerified").asBoolean());
+        userDto.setRoles(jwt.getClaim("roles").asList(UserRole.class));
+        userDto.setId(UUID.fromString(jwt.getClaim("sub").asString()));
+
+        dto.setToken(accessToken);
+        dto.setId(UUID.fromString(jwt.getClaim("jti").asString()));
+        dto.setSessionId(UUID.fromString(jwt.getClaim("sid").asString()));
+        dto.setIssuedAt(jwt.getIssuedAt().toInstant());
+        dto.setExpiresAt(jwt.getExpiresAt().toInstant());
+        dto.setUserDto(userDto);
+
+        return dto;
     }
 
     /**
-     *
      * @param refreshToken refresh token
      * @return Token ID
      */
@@ -172,17 +223,17 @@ public class JwtProvider {
         return tokenId;
     }
 
-    public UUID getUserIdFromToken(String token){
+    public UUID getUserIdFromToken(String token) {
         DecodedJWT jwt = decodeToken(token);
         return UUID.fromString(jwt.getSubject());
     }
 
-    public UUID getSessionIdFromToken(String token){
+    public UUID getSessionIdFromToken(String token) {
         DecodedJWT jwt = decodeToken(token);
         return UUID.fromString(jwt.getClaim("sid").asString());
     }
 
-    public UserDto getUserDtoFromToken(String token){
+    public UserDto getUserDtoFromToken(String token) {
         DecodedJWT jwt = decodeToken(token);
         UUID userId = UUID.fromString(jwt.getSubject());
         String username = jwt.getClaim("username").asString();

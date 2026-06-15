@@ -108,11 +108,12 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse refresh(String refreshToken, UserAgentInfoDto agentInfo) {
+    public AuthResponse refresh(String refreshToken) {
         sessionService.validateRefreshToken(refreshToken);
         UUID userId = jwtProvider.getUserIdFromToken(refreshToken);
         UserDto user = userService.getUserById(userId);
 
+        UserAgentInfoDto agentInfo = sessionService.getAgentInfoFromRefreshToken(refreshToken);
         sessionService.revokeRefreshToken(refreshToken);
 
         SessionTokens tokens = sessionService.createSession(user, agentInfo);
