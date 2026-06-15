@@ -93,6 +93,20 @@ public class SessionService {
         return tokenId;
     }
 
+    @Transactional(readOnly = true)
+    public UserAgentInfoDto getAgentInfoFromRefreshToken(String refreshToken) {
+        UUID tokenId = validateRefreshToken(refreshToken);
+        TokenEntity entity = tokenRepository.findById(tokenId)
+                .orElseThrow(() -> new InvalidTokenException("Token not found"));
+
+        UserAgentInfoDto agentInfo = new UserAgentInfoDto();
+        agentInfo.setBrowser(entity.getBrowser());
+        agentInfo.setOs(entity.getOs());
+        agentInfo.setDevice(entity.getDevice());
+        agentInfo.setIpAddress(entity.getIpAddress());
+        return agentInfo;
+    }
+
     @Transactional
     public void revokeRefreshToken(String refreshToken) {
         UUID tokenId = validateRefreshToken(refreshToken);
@@ -100,6 +114,7 @@ public class SessionService {
         TokenEntity tokenEntity = tokenRepository.findById(tokenId).orElse(null);
         if (tokenEntity != null) {
             tokenEntity.setRevoked(true);
+            revocationService.invalidateSessionTokens(tokenEntity.getSessionId());
         } else {
             throw new InvalidTokenException("Token not found");
         }
@@ -116,6 +131,7 @@ public class SessionService {
         }
 
         tokenEntity.setRevoked(true);
+        revocationService.invalidateSessionTokens(tokenEntity.getSessionId());
     }
 
     public void blockAccessToken(String token) {

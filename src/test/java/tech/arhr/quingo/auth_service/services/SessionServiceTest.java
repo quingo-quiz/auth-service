@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import tech.arhr.quingo.auth_service.data.sql.entity.TokenEntity;
+import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaTokenRepository;
 import tech.arhr.quingo.auth_service.dto.TokenDto;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -20,6 +21,7 @@ import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -200,6 +202,59 @@ class SessionServiceTest {
 
         UUID sessionId = jwtProvider.validateAccessToken(access.getToken()).getSessionId();
         verify(revocationService).invalidateSessionTokens(sessionId);
+    }
+
+    @Test
+    void revokeRefreshToken_ValidToken_InvalidatesSessionAccessTokens() {
+        TokenDto refresh = sessionService.createSession(defaultUser, null).getRefreshToken();
+        UUID sessionId = jwtProvider.getSessionIdFromToken(refresh.getToken());
+
+        TokenEntity entity = TokenEntity.builder()
+                .id(refresh.getId())
+                .sessionId(sessionId)
+                .revoked(false)
+                .token("hashed_token")
+                .build();
+
+        when(jpaTokenRepository.findById(refresh.getId())).thenReturn(Optional.of(entity));
+        when(hasher.verify(refresh.getToken(), entity.getToken())).thenReturn(true);
+
+        sessionService.revokeRefreshToken(refresh.getToken());
+
+        assertThat(entity.isRevoked()).isTrue();
+        verify(revocationService).invalidateSessionTokens(sessionId);
+    }
+
+    @Test
+    void revokeRefreshTokenById_ValidRequest_InvalidatesTargetSessionAccessTokens() {
+        TokenDto refresh = sessionService.createSession(defaultUser, null).getRefreshToken();
+        UUID sessionId = jwtProvider.getSessionIdFromToken(refresh.getToken());
+        UserEntity user = UserEntity.builder().id(defaultUser.getId()).build();
+
+        TokenEntity userTokenEntity = TokenEntity.builder()
+                .id(refresh.getId())
+                .sessionId(sessionId)
+                .revoked(false)
+                .token("hashed_token")
+                .user(user)
+                .build();
+
+        UUID targetSessionId = UUID.randomUUID();
+        TokenEntity targetEntity = TokenEntity.builder()
+                .id(UUID.randomUUID())
+                .sessionId(targetSessionId)
+                .revoked(false)
+                .user(user)
+                .build();
+
+        when(jpaTokenRepository.findById(refresh.getId())).thenReturn(Optional.of(userTokenEntity));
+        when(jpaTokenRepository.findById(targetEntity.getId())).thenReturn(Optional.of(targetEntity));
+        when(hasher.verify(refresh.getToken(), userTokenEntity.getToken())).thenReturn(true);
+
+        sessionService.revokeRefreshTokenById(refresh.getToken(), targetEntity.getId());
+
+        assertThat(targetEntity.isRevoked()).isTrue();
+        verify(revocationService).invalidateSessionTokens(targetSessionId);
     }
 
     @Test

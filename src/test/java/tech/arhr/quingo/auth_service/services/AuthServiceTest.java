@@ -79,9 +79,10 @@ class AuthServiceTest {
 
                 when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
                 when(userService.getUserById(user.getId())).thenReturn(user);
+                when(sessionService.getAgentInfoFromRefreshToken(refreshToken)).thenReturn(new UserAgentInfoDto());
                 when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(TokenDto.builder().build(), TokenDto.builder().build()));
 
-                authService.refresh(refreshToken, new UserAgentInfoDto());
+                authService.refresh(refreshToken);
 
                 verify(sessionService).revokeRefreshToken(refreshToken);
         }
@@ -95,9 +96,10 @@ class AuthServiceTest {
 
                 when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
                 when(userService.getUserById(user.getId())).thenReturn(user);
+                when(sessionService.getAgentInfoFromRefreshToken(refreshToken)).thenReturn(new UserAgentInfoDto());
                 when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(newAccess, newRefresh));
 
-                AuthResponse result = authService.refresh(refreshToken, new UserAgentInfoDto());
+                AuthResponse result = authService.refresh(refreshToken);
 
                 assertThat(result.getAccessToken()).isEqualTo(newAccess);
                 assertThat(result.getRefreshToken()).isEqualTo(newRefresh);
@@ -107,7 +109,7 @@ class AuthServiceTest {
         void refresh_InvalidToken_ThrowsInvalidTokenException() {
                 when(sessionService.validateRefreshToken(anyString())).thenThrow(new InvalidTokenException());
 
-                assertThatThrownBy(() -> authService.refresh("token", new UserAgentInfoDto()))
+                assertThatThrownBy(() -> authService.refresh("token"))
                                 .isInstanceOf(InvalidTokenException.class);
         }
 
