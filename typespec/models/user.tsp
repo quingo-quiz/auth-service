@@ -12,6 +12,13 @@ model User {
   accountStatus: AccountStatus;
 }
 
+@doc("Публичный профиль пользователя (без приватных данных)")
+model UserProfile {
+  id: uuid;
+  username: string;
+  bio?: string;
+}
+
 model UpdateUserRequest {
   @minLength(1)
   @maxLength(50)

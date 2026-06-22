@@ -3,12 +3,14 @@ package tech.arhr.quingo.auth_service.services;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.arhr.quingo.auth_service.data.sql.entity.UserEntity;
 import tech.arhr.quingo.auth_service.data.sql.JpaUserRepository;
+import tech.arhr.quingo.auth_service.dto.UserProfileDto;
 import tech.arhr.quingo.auth_service.dto.oauth2.OAuth2UserData;
 import tech.arhr.quingo.auth_service.dto.UpdateUserRequest;
 import tech.arhr.quingo.auth_service.dto.UserDto;
@@ -24,6 +26,7 @@ import tech.arhr.quingo.auth_service.exceptions.auth.EmailAlreadyExistsException
 import tech.arhr.quingo.auth_service.exceptions.auth.InvalidCredentialsException;
 import tech.arhr.quingo.auth_service.exceptions.auth.PasswordNotSetException;
 import tech.arhr.quingo.auth_service.exceptions.auth.UsernameAlreadyExistsException;
+import tech.arhr.quingo.auth_service.exceptions.QuingoAppException;
 import tech.arhr.quingo.auth_service.exceptions.persistence.EntityNotFoundException;
 import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.UserMapper;
@@ -34,6 +37,8 @@ import java.util.UUID;
 
 @Service
 public class UserService {
+    private static final int MAX_PROFILE_BATCH_SIZE = 100;
+
     private final VerificationService verificationService;
     private final JpaUserRepository userRepository;
     private final UserMapper userMapper;
@@ -180,7 +185,10 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users:cached", key = "#userId")
+    @Caching(evict = {
+            @CacheEvict(value = "users:cached", key = "#userId"),
+            @CacheEvict(value = "profiles:cached", key = "#userId")
+    })
     public UserDto updateUser(UUID userId, UpdateUserRequest request) {
         UserEntity userEntity = findByIdOrThrow(userId);
 
@@ -197,6 +205,32 @@ public class UserService {
 
         userEntity = userRepository.save(userEntity);
         return userMapper.toDto(userEntity);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "profiles:cached", key = "#userId")
+    public UserProfileDto getUserProfile(UUID userId) {
+        UserEntity userEntity = findByIdOrThrow(userId);
+
+        return userMapper.toProfileDto(userEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserProfileDto> getUserProfiles(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        if (userIds.size() > MAX_PROFILE_BATCH_SIZE) {
+            throw new QuingoAppException(
+                    "Too many ids: maximum is " + MAX_PROFILE_BATCH_SIZE);
+        }
+
+        var result = userRepository.findAllById(userIds).stream()
+                .map(userMapper::toProfileDto)
+                .toList();
+
+        result.forEach(dto -> addToProfilesCache(dto.getId(), dto));
+        return result;
     }
 
     @EventListener(UserEmailVerifiedEvent.class)
@@ -233,6 +267,13 @@ public class UserService {
         var cache = cacheManager.getCache("users:cached");
         if (cache != null) {
             cache.evict(userId);
+        }
+    }
+
+    private void addToProfilesCache(UUID userId, UserProfileDto profileDto) {
+        var cache = cacheManager.getCache("profiles:cached");
+        if (cache != null) {
+            cache.put(userId, profileDto);
         }
     }
 }
