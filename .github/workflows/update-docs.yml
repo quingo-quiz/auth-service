@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Generate OpenAPI from TypeSpec
         run: |
@@ -39,11 +39,16 @@ jobs:
 
       - name: Update ConfigMap
         run: |
+          if kubectl get configmap openapi-specs -n quingo-utils &>/dev/null; then
+            kubectl get configmap openapi-specs -n quingo-utils -o json | \
+              jq --rawfile content ./auth-service.yml '.data["auth-service.yml"] = $content' | \
+              kubectl apply -f -
+          else
             kubectl create configmap openapi-specs \
               --namespace quingo-utils \
-              --from-file=auth-service.yml=./auth-service.yml \
-              --dry-run=client -o yaml | kubectl apply -f -
-            
-            kubectl rollout restart deployment/swagger-ui -n quingo-utils
-            
-            kubectl rollout status deployment/swagger-ui -n quingo-utils --timeout=60s
+              --from-file=auth-service.yml=./auth-service.yml
+          fi
+
+          kubectl rollout restart deployment/swagger-ui -n quingo-utils
+
+          kubectl rollout status deployment/swagger-ui -n quingo-utils --timeout=60s

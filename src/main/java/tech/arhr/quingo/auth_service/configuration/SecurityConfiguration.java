@@ -1,6 +1,7 @@
 package tech.arhr.quingo.auth_service.configuration;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -52,6 +53,7 @@ public class SecurityConfiguration {
                 .logout(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(requests -> requests
+                                .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                                 .requestMatchers(
                                         "/register",
                                         "/auth",
