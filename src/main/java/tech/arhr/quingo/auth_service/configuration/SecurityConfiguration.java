@@ -69,6 +69,8 @@ public class SecurityConfiguration {
                                 ).permitAll()
                                 .requestMatchers(HttpMethod.PATCH,
                                         "/user/email/verify").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/profile/*").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/profile/batch").permitAll()
 
                                 .anyRequest().authenticated()
                         //.anyRequest().permitAll()
