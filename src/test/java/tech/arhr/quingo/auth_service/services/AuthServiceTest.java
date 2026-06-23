@@ -80,7 +80,7 @@ class AuthServiceTest {
                 when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
                 when(userService.getUserById(user.getId())).thenReturn(user);
                 when(sessionService.getAgentInfoFromRefreshToken(refreshToken)).thenReturn(new UserAgentInfoDto());
-                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(TokenDto.builder().build(), TokenDto.builder().build()));
+                when(sessionService.createSession(any(UserDto.class), any(UserAgentInfoDto.class), any())).thenReturn(new SessionTokens(TokenDto.builder().build(), TokenDto.builder().build()));
 
                 authService.refresh(refreshToken);
 
@@ -97,7 +97,7 @@ class AuthServiceTest {
                 when(jwtProvider.getUserIdFromToken(refreshToken)).thenReturn(user.getId());
                 when(userService.getUserById(user.getId())).thenReturn(user);
                 when(sessionService.getAgentInfoFromRefreshToken(refreshToken)).thenReturn(new UserAgentInfoDto());
-                when(sessionService.createSession(eq(user), any())).thenReturn(new SessionTokens(newAccess, newRefresh));
+                when(sessionService.createSession(eq(user), any(), any())).thenReturn(new SessionTokens(newAccess, newRefresh));
 
                 AuthResponse result = authService.refresh(refreshToken);
 
