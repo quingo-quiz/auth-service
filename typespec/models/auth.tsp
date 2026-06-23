@@ -67,8 +67,11 @@ model SessionModel {
   @doc("ID сессии")
   sessionId: uuid;
 
-  @doc("Время выдачи")
+  @doc("Время выдачи токена (обновляется при каждом рефреше)")
   issuedAt: utcDateTime;
+
+  @doc("Время первого входа сессии (не меняется при рефрешах) — использовать как «начало сессии»")
+  loggedInAt: utcDateTime;
 
   @doc("Время истечения срока действия")
   expiresAt: utcDateTime;

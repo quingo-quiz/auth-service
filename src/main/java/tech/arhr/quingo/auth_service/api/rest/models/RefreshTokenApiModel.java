@@ -11,6 +11,7 @@ public class RefreshTokenApiModel {
     private UUID sessionId;
     private Instant issuedAt;
     private Instant expiresAt;
+    private Instant loggedInAt;
     private boolean isCurrent;
 
     private String browser;

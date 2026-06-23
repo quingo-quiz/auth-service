@@ -18,6 +18,7 @@ public class TokenDto {
     private String token;
     private Instant issuedAt;
     private Instant expiresAt;
+    private Instant loggedInAt;
     private boolean revoked;
     private UserDto userDto;
 

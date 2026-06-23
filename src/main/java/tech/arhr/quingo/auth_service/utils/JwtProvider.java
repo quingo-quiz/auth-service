@@ -122,6 +122,13 @@ public class JwtProvider {
     }
 
     public TokenDto createRefreshToken(UserDto user, UUID sessionId, UserAgentInfoDto agentInfo) {
+        return createRefreshToken(user, sessionId, agentInfo, timeProvider.now());
+    }
+
+    /**
+     * Создаёт refresh-токен с явным временем первого входа.
+     */
+    public TokenDto createRefreshToken(UserDto user, UUID sessionId, UserAgentInfoDto agentInfo, Instant loggedInAt) {
         Instant issuedAt = timeProvider.now();
         Instant expiresAt = issuedAt.plusSeconds(60L * 60 * 24 * REFRESH_EXPIRATION_DAYS);
         UUID id = UUID.randomUUID();
@@ -142,6 +149,7 @@ public class JwtProvider {
                 .token(token)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
+                .loggedInAt(loggedInAt)
                 .userDto(user)
                 .userAgentInfo(agentInfo)
                 .build();

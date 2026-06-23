@@ -20,6 +20,7 @@ import tech.arhr.quingo.auth_service.utils.JwtProvider;
 import tech.arhr.quingo.auth_service.utils.TimeProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,14 +36,29 @@ public class SessionService {
     private final JwtProvider jwtProvider;
 
 
+    /**
+     * Создаёт новую логин-сессию.
+     */
     public SessionTokens createSession(UserDto user, UserAgentInfoDto agentInfo) {
         UUID sessionId = UUID.randomUUID();
         TokenDto refresh = jwtProvider.createRefreshToken(user, sessionId, agentInfo);
+        return buildSession(user, sessionId, refresh, agentInfo);
+    }
+
+    /**
+     * Перегрузка для ротации сессии, с сохранением loggedInAt
+     */
+    public SessionTokens createSession(UserDto user, UserAgentInfoDto agentInfo, Instant loggedInAt) {
+        UUID sessionId = UUID.randomUUID();
+        TokenDto refresh = jwtProvider.createRefreshToken(user, sessionId, agentInfo, loggedInAt);
+        return buildSession(user, sessionId, refresh, agentInfo);
+    }
+
+    private SessionTokens buildSession(UserDto user, UUID sessionId, TokenDto refresh, UserAgentInfoDto agentInfo) {
         TokenDto access = jwtProvider.createAccessToken(user, sessionId);
 
         TokenEntity tokenEntity = tokenMapper.toEntity(refresh);
         tokenEntity.setToken(hasher.hash(tokenEntity.getToken()));
-
 
         if (agentInfo != null) {
             tokenEntity.setBrowser(agentInfo.getBrowser());
@@ -105,6 +121,14 @@ public class SessionService {
         agentInfo.setDevice(entity.getDevice());
         agentInfo.setIpAddress(entity.getIpAddress());
         return agentInfo;
+    }
+
+    @Transactional(readOnly = true)
+    public Instant getLoggedInAtFromRefreshToken(String refreshToken) {
+        UUID tokenId = validateRefreshToken(refreshToken);
+        TokenEntity entity = tokenRepository.findById(tokenId)
+                .orElseThrow(() -> new InvalidTokenException("Token not found"));
+        return entity.getLoggedInAt();
     }
 
     @Transactional

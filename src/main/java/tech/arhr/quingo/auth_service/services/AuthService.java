@@ -21,6 +21,7 @@ import tech.arhr.quingo.auth_service.utils.Hasher;
 import tech.arhr.quingo.auth_service.utils.JwtProvider;
 import tech.arhr.quingo.auth_service.utils.TokenMapper;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -114,9 +115,10 @@ public class AuthService {
         UserDto user = userService.getUserById(userId);
 
         UserAgentInfoDto agentInfo = sessionService.getAgentInfoFromRefreshToken(refreshToken);
+        Instant loggedInAt = sessionService.getLoggedInAtFromRefreshToken(refreshToken);
         sessionService.revokeRefreshToken(refreshToken);
 
-        SessionTokens tokens = sessionService.createSession(user, agentInfo);
+        SessionTokens tokens = sessionService.createSession(user, agentInfo, loggedInAt);
         return AuthResponse.builder()
                 .accessToken(tokens.getAccessToken())
                 .refreshToken(tokens.getRefreshToken())

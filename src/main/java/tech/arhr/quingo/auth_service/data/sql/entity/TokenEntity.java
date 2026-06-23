@@ -26,6 +26,10 @@ public class TokenEntity {
     private String token;
     private Instant expiresAt;
     private Instant issuedAt;
+
+    @Column(name = "logged_in_at")
+    private Instant loggedInAt;
+
     private boolean revoked;
 
     @ManyToOne
